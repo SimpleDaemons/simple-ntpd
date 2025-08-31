@@ -9,17 +9,28 @@
 namespace simple_ntpd {
 
 // NtpServer implementation
-NtpServer::NtpServer(const NtpConfig& config)
+NtpServer::NtpServer(std::shared_ptr<NtpConfig> config, std::shared_ptr<Logger> logger)
     : config_(config),
-      is_running_(false),
+      logger_(logger),
+      running_(false),
+      shutdown_requested_(false),
       server_socket_(INVALID_SOCKET),
-      connection_manager_(config.performance.max_connections),
+      server_address_(config->network.listen_address),
+      server_port_(config->network.listen_port),
+      active_connections_(),
+      connections_mutex_(),
+      accept_thread_(),
       worker_threads_(),
-      statistics_() {
+      workers_running_(false),
+      stats_(),
+      stats_mutex_(),
+      config_change_callback_(),
+      last_cleanup_time_(std::chrono::steady_clock::now()),
+      cleanup_interval_(std::chrono::seconds(300)) {
     
-    Logger::getInstance().info("NTP Server initialized with configuration");
-    Logger::getInstance().debug("Server will listen on " + config.network.listen_address + 
-                              ":" + std::to_string(config.network.listen_port));
+    logger_->info("NTP Server initialized with configuration");
+    logger_->debug("Server will listen on " + config->network.listen_address + 
+                  ":" + std::to_string(config->network.listen_port));
 }
 
 NtpServer::~NtpServer() {
@@ -27,87 +38,87 @@ NtpServer::~NtpServer() {
 }
 
 bool NtpServer::start() {
-    if (is_running_) {
-        Logger::getInstance().warning("NTP Server is already running");
+    if (running_) {
+        logger_->warning("NTP Server is already running");
         return false;
     }
     
-    Logger::getInstance().info("Starting NTP Server...");
+    logger_->info("Starting NTP Server...");
     
     // Initialize socket
     if (!initializeSocket()) {
-        Logger::getInstance().error("Failed to initialize server socket");
+        logger_->error("Failed to initialize server socket");
         return false;
     }
     
     // Bind socket
     if (!bindSocket()) {
-        Logger::getInstance().error("Failed to bind server socket");
-        cleanupSocket();
+        logger_->error("Failed to bind server socket");
+        closeSocket();
         return false;
     }
     
     // Start listening
     if (!startListening()) {
-        Logger::getInstance().error("Failed to start listening on socket");
-        cleanupSocket();
+        logger_->error("Failed to start listening on socket");
+        closeSocket();
         return false;
     }
     
     // Start worker threads
     if (!startWorkerThreads()) {
-        Logger::getInstance().error("Failed to start worker threads");
-        cleanupSocket();
+        logger_->error("Failed to start worker threads");
+        closeSocket();
         return false;
     }
     
-    is_running_ = true;
-    start_time_ = std::chrono::system_clock::now();
+    running_ = true;
+    stats_.start_time = std::chrono::steady_clock::now();
     
-    Logger::getInstance().info("NTP Server started successfully");
-    Logger::getInstance().info("Listening on " + config_.network.listen_address + 
-                              ":" + std::to_string(config_.network.listen_port));
+    logger_->info("NTP Server started successfully");
+    logger_->info("Listening on " + config_->network.listen_address + 
+                  ":" + std::to_string(config_->network.listen_port));
     
     return true;
 }
 
 void NtpServer::stop() {
-    if (!is_running_) {
+    if (!running_) {
         return;
     }
     
-    Logger::getInstance().info("Stopping NTP Server...");
+    logger_->info("Stopping NTP Server...");
     
-    is_running_ = false;
+    running_ = false;
     
     // Stop worker threads
     stopWorkerThreads();
     
     // Close all connections
-    connection_manager_.closeAllConnections();
+    cleanupConnections();
     
     // Cleanup socket
-    cleanupSocket();
+    closeSocket();
     
-    Logger::getInstance().info("NTP Server stopped");
+    logger_->info("NTP Server stopped");
 }
 
 bool NtpServer::isRunning() const {
-    return is_running_;
+    return running_;
 }
 
 bool NtpServer::initializeSocket() {
     #ifdef _WIN32
     WSADATA wsa_data;
     if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
-        Logger::getInstance().error("Failed to initialize Winsock");
+        logger_->error("Failed to initialize Winsock");
         return false;
     }
     #endif
     
     server_socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (server_socket_ == INVALID_SOCKET) {
-        Logger::getInstance().error("Failed to create socket: " + std::strerror(errno));
+        logger_->error("Failed to create socket: " + std::strerror(errno));
         return false;
     }
     
@@ -115,21 +126,8 @@ bool NtpServer::initializeSocket() {
     int opt = 1;
     if (setsockopt(server_socket_, SOL_SOCKET, SO_REUSEADDR, 
                    reinterpret_cast<const char*>(&opt), sizeof(opt)) < 0) {
-        Logger::getInstance().warning("Failed to set SO_REUSEADDR: " + std::strerror(errno));
+        logger_->warning("Failed to set SO_REUSEADDR: " + std::strerror(errno));
     }
-    
-    // Set non-blocking mode
-    #ifdef _WIN32
-    u_long mode = 1;
-    if (ioctlsocket(server_socket_, FIONBIO, &mode) != 0) {
-        Logger::getInstance().warning("Failed to set non-blocking mode");
-    }
-    #else
-    int flags = fcntl(server_socket_, F_GETFL, 0);
-    if (flags >= 0) {
-        fcntl(server_socket_, F_SETFL, flags | O_NONBLOCK);
-    }
-    #endif
     
     return true;
 }
@@ -138,16 +136,16 @@ bool NtpServer::bindSocket() {
     struct sockaddr_in server_addr;
     std::memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(config_.network.listen_port);
+    server_addr.sin_port = htons(server_port_);
     
-    if (inet_pton(AF_INET, config_.network.listen_address.c_str(), &server_addr.sin_addr) <= 0) {
-        Logger::getInstance().error("Invalid listen address: " + config_.network.listen_address);
+    if (inet_pton(AF_INET, server_address_.c_str(), &server_addr.sin_addr) <= 0) {
+        logger_->error("Invalid listen address: " + server_address_);
         return false;
     }
     
     if (bind(server_socket_, reinterpret_cast<struct sockaddr*>(&server_addr), 
              sizeof(server_addr)) < 0) {
-        Logger::getInstance().error("Failed to bind socket: " + std::strerror(errno));
+        logger_->error("Failed to bind socket: " + std::strerror(errno));
         return false;
     }
     
@@ -161,17 +159,20 @@ bool NtpServer::startListening() {
 }
 
 bool NtpServer::startWorkerThreads() {
-    size_t thread_count = config_.performance.worker_threads;
+    size_t thread_count = config_->performance.worker_threads;
     
     for (size_t i = 0; i < thread_count; ++i) {
         worker_threads_.emplace_back(&NtpServer::workerThreadFunction, this, i);
-        Logger::getInstance().debug("Started worker thread " + std::to_string(i));
+        logger_->debug("Started worker thread " + std::to_string(i));
     }
     
+    workers_running_ = true;
     return true;
 }
 
 void NtpServer::stopWorkerThreads() {
+    workers_running_ = false;
+    
     for (auto& thread : worker_threads_) {
         if (thread.joinable()) {
             thread.join();
@@ -179,26 +180,24 @@ void NtpServer::stopWorkerThreads() {
     }
     
     worker_threads_.clear();
-    Logger::getInstance().info("All worker threads stopped");
+    logger_->info("All worker threads stopped");
 }
 
 void NtpServer::workerThreadFunction(size_t thread_id) {
-    Logger::getInstance().debug("Worker thread " + std::to_string(thread_id) + " started");
+    logger_->debug("Worker thread " + std::to_string(thread_id) + " started");
     
-    while (is_running_) {
+    while (workers_running_) {
         // Process incoming packets
         processIncomingPackets();
         
         // Clean up inactive connections
-        connection_manager_.closeInactiveConnections(
-            std::chrono::seconds(config_.performance.connection_timeout)
-        );
+        cleanupConnections();
         
         // Small sleep to prevent busy waiting
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     
-    Logger::getInstance().debug("Worker thread " + std::to_string(thread_id) + " stopped");
+    logger_->debug("Worker thread " + std::to_string(thread_id) + " stopped");
 }
 
 void NtpServer::processIncomingPackets() {
@@ -206,7 +205,7 @@ void NtpServer::processIncomingPackets() {
     struct sockaddr_in client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
     
-    while (is_running_) {
+    while (workers_running_) {
         std::memset(&client_addr, 0, sizeof(client_addr));
         
         ssize_t bytes_received = recvfrom(server_socket_, buffer.data(), buffer.size(), 0,
@@ -219,7 +218,7 @@ void NtpServer::processIncomingPackets() {
                 break;
             }
             
-            Logger::getInstance().error("Failed to receive data: " + std::strerror(errno));
+            logger_->error("Failed to receive data: " + std::strerror(errno));
             break;
         }
         
@@ -245,41 +244,47 @@ void NtpServer::processPacket(const std::vector<uint8_t>& data,
     // Create or get connection for this client
     auto connection = getOrCreateConnection(client_ip, client_port);
     if (!connection) {
-        Logger::getInstance().warning("Failed to create connection for " + 
-                                    std::string(client_ip) + ":" + std::to_string(client_port));
+        logger_->warning("Failed to create connection for " + 
+                       std::string(client_ip) + ":" + std::to_string(client_port));
         return;
     }
     
     // Process the packet
     if (connection->processPacket(data)) {
-        statistics_.packets_processed++;
-        statistics_.bytes_processed += data.size();
+        stats_.total_requests++;
+        stats_.total_bytes_transferred += data.size();
     } else {
-        statistics_.packets_errors++;
+        stats_.total_errors++;
     }
 }
 
 std::shared_ptr<NtpConnection> NtpServer::getOrCreateConnection(const std::string& client_ip, 
                                                                uint16_t client_port) {
-    // For UDP, we create a new connection object for each client
-    // In a more sophisticated implementation, we might want to maintain
-    // a connection cache based on client address
+    std::lock_guard<std::mutex> lock(connections_mutex_);
+    
+    std::string client_key = client_ip + ":" + std::to_string(client_port);
+    
+    auto it = active_connections_.find(client_key);
+    if (it != active_connections_.end()) {
+        return it->second;
+    }
     
     // Create a dummy socket for the connection object
     // In practice, we'd handle this differently for UDP
     socket_t dummy_socket = INVALID_SOCKET;
     
-    auto connection = connection_manager_.createConnection(dummy_socket, client_ip, client_port);
+    auto connection = std::make_shared<NtpConnection>(dummy_socket, client_ip, client_port);
     if (connection) {
-        // Process the packet directly since we don't have a real socket
-        // This is a simplified approach for UDP
+        active_connections_[client_key] = connection;
+        stats_.total_connections++;
+        stats_.active_connections++;
         return connection;
     }
     
     return nullptr;
 }
 
-void NtpServer::cleanupSocket() {
+void NtpServer::closeSocket() {
     if (server_socket_ != INVALID_SOCKET) {
         #ifdef _WIN32
         closesocket(server_socket_);
@@ -291,52 +296,43 @@ void NtpServer::cleanupSocket() {
     }
 }
 
-const NtpConfig& NtpServer::getConfig() const {
+void NtpServer::cleanupConnections() {
+    std::lock_guard<std::mutex> lock(connections_mutex_);
+    
+    auto it = active_connections_.begin();
+    while (it != active_connections_.end()) {
+        if (!it->second->isActive()) {
+            it = active_connections_.erase(it);
+            stats_.active_connections--;
+        } else {
+            ++it;
+        }
+    }
+}
+
+const std::shared_ptr<NtpConfig>& NtpServer::getConfig() const {
     return config_;
 }
 
-const NtpConnectionManager& NtpServer::getConnectionManager() const {
-    return connection_manager_;
-}
-
-NtpServerStatistics NtpServer::getStatistics() const {
-    std::lock_guard<std::mutex> lock(statistics_mutex_);
-    return statistics_;
-}
-
-std::string NtpServer::getServerStatus() const {
+std::string NtpServer::getStatus() const {
     std::stringstream ss;
     
     ss << "NTP Server Status:\n";
-    ss << "  Status: " << (is_running_ ? "Running" : "Stopped") << "\n";
+    ss << "  Status: " << (running_ ? "Running" : "Stopped") << "\n";
     
-    if (is_running_) {
-        auto uptime = std::chrono::system_clock::now() - start_time_;
+    if (running_) {
+        auto uptime = std::chrono::steady_clock::now() - stats_.start_time;
         auto uptime_seconds = std::chrono::duration_cast<std::chrono::seconds>(uptime).count();
         ss << "  Uptime: " << uptime_seconds << " seconds\n";
-        ss << "  Listen Address: " << config_.network.listen_address << ":" 
-           << config_.network.listen_port << "\n";
+        ss << "  Listen Address: " << server_address_ << ":" << server_port_ << "\n";
         ss << "  Worker Threads: " << worker_threads_.size() << "\n";
-        ss << "  Active Connections: " << connection_manager_.getActiveConnectionCount() << "\n";
-        
-        auto stats = getStatistics();
-        ss << "  Packets Processed: " << stats.packets_processed << "\n";
-        ss << "  Bytes Processed: " << stats.bytes_processed << "\n";
-        ss << "  Errors: " << stats.packets_errors << "\n";
+        ss << "  Active Connections: " << stats_.active_connections << "\n";
+        ss << "  Total Requests: " << stats_.total_requests << "\n";
+        ss << "  Total Bytes: " << stats_.total_bytes_transferred << "\n";
+        ss << "  Total Errors: " << stats_.total_errors << "\n";
     }
     
     return ss.str();
-}
-
-void NtpServer::updateStatistics(const NtpPacket& packet, bool success) {
-    std::lock_guard<std::mutex> lock(statistics_mutex_);
-    
-    if (success) {
-        statistics_.packets_processed++;
-        statistics_.bytes_processed += NTP_PACKET_SIZE;
-    } else {
-        statistics_.packets_errors++;
-    }
 }
 
 } // namespace simple_ntpd
