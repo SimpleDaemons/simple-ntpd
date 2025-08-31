@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 SimpleDaemons
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "simple_ntpd/ntp_connection.hpp"
 #include "simple_ntpd/logger.hpp"
 #include "simple_ntpd/ntp_packet.hpp"
@@ -93,7 +109,7 @@ bool NtpConnection::handlePacket(const std::vector<uint8_t>& data) {
     
     // Parse the NTP packet
     NtpPacket packet;
-    if (!packet.parse(data.data(), data.size())) {
+    if (!packet.parseFromData(data)) {
         logger_->warning("Failed to parse NTP packet from " + client_address_);
         return false;
     }
@@ -105,70 +121,40 @@ bool NtpConnection::handlePacket(const std::vector<uint8_t>& data) {
     }
     
     // Check if this is a client request
-    if (packet.getMode() != NtpMode::CLIENT) {
+    if (packet.mode != NtpMode::CLIENT) {
         logger_->warning("Received non-client packet from " + client_address_ + 
-                        " (mode: " + std::to_string(static_cast<int>(packet.getMode())) + ")");
+                        " (mode: " + std::to_string(static_cast<int>(packet.mode)) + ")");
         return false;
     }
     
     // Create server response
-    auto response = createServerResponse(packet);
-    if (!response) {
-        logger_->error("Failed to create server response for " + client_address_);
-        return false;
-    }
+    auto response = NtpPacket::createServerResponse(packet, NtpStratum::SECONDARY_REFERENCE, "LOCL");
     
     // Send the response
-    auto response_data = response->serialize();
-    if (!sendResponse(*response)) {
+    auto response_data = response.serializeToData();
+    if (!sendResponse(response)) {
         logger_->error("Failed to send response to " + client_address_);
         return false;
     }
     
     logger_->debug("Processed NTP request from " + client_address_ + 
-                  " (stratum: " + std::to_string(response->getStratum()) + ")");
+                  " (stratum: " + std::to_string(static_cast<int>(response.stratum)) + ")");
     
     // Update statistics
-    stats_.total_requests++;
-    stats_.total_bytes_transferred += data.size();
+    stats_.packets_received++;
+    stats_.bytes_received += data.size();
     
     return true;
 }
 
-std::unique_ptr<NtpPacket> NtpConnection::createServerResponse(const NtpPacket& request) {
-    // Get current time for reference timestamp
-    auto now = std::chrono::system_clock::now();
-    NtpTimestamp reference_ts(now);
-    
-    // Create response packet
-    auto response = NtpPacketHandler::createServerResponse(
-        request,
-        getServerStratum(),
-        reference_ts,
-        getReferenceId()
-    );
-    
-    return response;
-}
 
-uint8_t NtpConnection::getServerStratum() const {
-    // This would typically come from configuration or upstream servers
-    // For now, return a default stratum
-    return 2;
-}
-
-uint32_t NtpConnection::getReferenceId() const {
-    // This would typically be the reference clock identifier
-    // For now, return a default value
-    return 0x4C4F434C; // "LOCL" in ASCII
-}
 
 bool NtpConnection::sendResponse(const NtpPacket& packet) {
-    auto data = packet.serialize();
+    auto data = packet.serializeToData();
     
     if (writeToSocket(data)) {
-        stats_.total_responses++;
-        stats_.total_bytes_transferred += data.size();
+        stats_.packets_sent++;
+        stats_.bytes_sent += data.size();
         return true;
     }
     
@@ -208,7 +194,8 @@ bool NtpConnection::writeToSocket(const std::vector<uint8_t>& data) {
 }
 
 void NtpConnection::updateStats(size_t received_bytes, size_t sent_bytes) {
-    stats_.total_bytes_transferred += received_bytes + sent_bytes;
+    stats_.bytes_received += received_bytes;
+    stats_.bytes_sent += sent_bytes;
 }
 
 void NtpConnection::logActivity(const std::string& message, LogLevel level) {
@@ -235,7 +222,7 @@ void NtpConnection::logActivity(const std::string& message, LogLevel level) {
 
 void NtpConnection::handleError(const std::string& error_message) {
     logger_->error("Connection error for " + client_address_ + ": " + error_message);
-    stats_.total_errors++;
+    stats_.errors++;
 }
 
 void NtpConnection::connectionLoop() {
@@ -257,7 +244,7 @@ void NtpConnection::connectionLoop() {
         
         // Handle the received packet
         if (!handlePacket(buffer)) {
-            stats_.total_errors++;
+            stats_.errors++;
         }
         
         // Small delay to prevent busy waiting
