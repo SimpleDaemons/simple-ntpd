@@ -1,0 +1,43 @@
+# Simple NTP Daemon Configuration File
+# This file contains configuration options for simple-ntpd
+
+# Network Configuration
+listen_address = 0.0.0.0
+listen_port = 123
+enable_ipv6 = true
+max_connections = 100
+
+# NTP Server Configuration
+stratum = 2
+reference_id = "GPS"
+reference_clock = "GPS"
+upstream_servers = ["time.nist.gov", "time.google.com", "pool.ntp.org"]
+sync_interval = 64
+timeout = 1000
+
+# Logging Configuration
+log_file = /var/log/simple-ntpd.log
+log_level = INFO
+enable_console_logging = true
+enable_syslog = false
+
+# Security Configuration
+enable_authentication = false
+authentication_key = ""
+restrict_queries = false
+allowed_clients = []
+denied_clients = []
+
+# Performance Configuration
+worker_threads = 4
+max_packet_size = 1024
+enable_statistics = true
+stats_interval = 60
+
+# Drift File Configuration
+drift_file = /var/lib/simple-ntpd/drift
+enable_drift_compensation = true
+
+# Leap Second Configuration
+leap_second_file = /var/lib/simple-ntpd/leap-seconds
+enable_leap_second_handling = true
