@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstring>
 #include <thread>
+#include <sstream>
 
 namespace simple_ntpd {
 
@@ -15,8 +16,8 @@ NtpServer::NtpServer(std::shared_ptr<NtpConfig> config, std::shared_ptr<Logger> 
       running_(false),
       shutdown_requested_(false),
       server_socket_(INVALID_SOCKET),
-      server_address_(config->network.listen_address),
-      server_port_(config->network.listen_port),
+      server_address_(config->listen_address),
+      server_port_(config->listen_port),
       active_connections_(),
       connections_mutex_(),
       accept_thread_(),
@@ -29,8 +30,8 @@ NtpServer::NtpServer(std::shared_ptr<NtpConfig> config, std::shared_ptr<Logger> 
       cleanup_interval_(std::chrono::seconds(300)) {
     
     logger_->info("NTP Server initialized with configuration");
-    logger_->debug("Server will listen on " + config->network.listen_address + 
-                  ":" + std::to_string(config->network.listen_port));
+    logger_->debug("Server will listen on " + config->listen_address + 
+                  ":" + std::to_string(config->listen_port));
 }
 
 NtpServer::~NtpServer() {
@@ -65,8 +66,8 @@ bool NtpServer::start() {
     stats_.start_time = std::chrono::steady_clock::now();
     
     logger_->info("NTP Server started successfully");
-    logger_->info("Listening on " + config_->network.listen_address + 
-                  ":" + std::to_string(config_->network.listen_port));
+    logger_->info("Listening on " + config_->listen_address + 
+                  ":" + std::to_string(config_->listen_port));
     
     return true;
 }
@@ -234,7 +235,7 @@ void NtpServer::processPacket(const std::vector<uint8_t>& data,
     }
     
     // Process the packet
-    if (connection->processPacket(data)) {
+    if (connection->handlePacket(data)) {
         stats_.total_requests++;
         stats_.total_bytes_transferred += data.size();
     } else {
@@ -257,7 +258,7 @@ std::shared_ptr<NtpConnection> NtpServer::getOrCreateConnection(const std::strin
     // In practice, we'd handle this differently for UDP
     socket_t dummy_socket = INVALID_SOCKET;
     
-    auto connection = std::make_shared<NtpConnection>(dummy_socket, client_ip, client_port);
+    auto connection = std::make_shared<NtpConnection>(dummy_socket, client_ip, config_, logger_);
     if (connection) {
         active_connections_[client_key] = connection;
         stats_.total_connections++;
@@ -274,7 +275,7 @@ void NtpServer::closeSocket() {
         closesocket(server_socket_);
         WSACleanup();
         #else
-        ::close(server_socket_);
+        CLOSE_SOCKET(server_socket_);
         #endif
         server_socket_ = INVALID_SOCKET;
     }
@@ -294,7 +295,7 @@ void NtpServer::cleanupConnections() {
     }
 }
 
-const std::shared_ptr<NtpConfig>& NtpServer::getConfig() const {
+std::shared_ptr<NtpConfig> NtpServer::getConfig() const {
     return config_;
 }
 
