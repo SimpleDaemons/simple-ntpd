@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "simple-ntpd",
+			"path": "."
+		},
+		{
+			"name": "simple-tftpd",
+			"path": "../simple-tftpd"
+		}
+	],
+	"settings": {}
+}
