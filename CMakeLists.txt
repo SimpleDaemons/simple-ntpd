@@ -148,7 +148,8 @@ install(DIRECTORY docs/ DESTINATION share/doc/simple-ntpd)
 # Tests
 if(BUILD_TESTS)
     enable_testing()
-    add_subdirectory(src/tests)
+    # TODO: Add tests when implemented
+    # add_subdirectory(src/tests)
 endif()
 
 # Examples
