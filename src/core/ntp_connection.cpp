@@ -121,7 +121,7 @@ bool NtpConnection::handlePacket(const std::vector<uint8_t>& data) {
     }
     
     // Check if this is a client request
-    if (packet.mode != NtpMode::CLIENT) {
+    if (packet.mode != static_cast<uint8_t>(NtpMode::CLIENT)) {
         logger_->warning("Received non-client packet from " + client_address_ + 
                         " (mode: " + std::to_string(static_cast<int>(packet.mode)) + ")");
         return false;
