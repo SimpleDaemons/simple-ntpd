@@ -1,0 +1,97 @@
+# Build artifacts
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+# Makefile (keep our custom Makefile, ignore CMake-generated ones)
+CMakeFiles/Makefile
+*.cmake
+*.config
+*.version
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+simple-tftpd
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Package files
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+
+# Test coverage
+*.gcov
+*.gcda
+*.gcno
+coverage/
+
+# Valgrind output
+valgrind-out.txt
+
+# Configuration files (keep examples)
+config/*.conf
+!config/*.example
+
+# Documentation build
+docs/_build/
+docs/html/
+docs/latex/
+
+# Dependencies
+vcpkg_installed/
+conan/
