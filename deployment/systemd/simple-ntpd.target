@@ -1,0 +1,8 @@
+[Unit]
+Description=Simple NTP Daemon Target
+Documentation=man:simple-ntpd(8)
+Requires=simple-ntpd.service
+After=simple-ntpd.service
+
+[Install]
+WantedBy=multi-user.target

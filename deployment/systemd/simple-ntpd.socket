@@ -1,0 +1,23 @@
+[Unit]
+Description=Simple NTP Daemon Socket
+Documentation=man:simple-ntpd(8)
+PartOf=simple-ntpd.service
+Before=simple-ntpd.service
+
+[Socket]
+ListenDatagram=0.0.0.0:123
+ListenDatagram=[::]:123
+BindIPv6Only=both
+SocketUser=ntp
+SocketGroup=ntp
+SocketMode=0644
+Backlog=128
+MaxConnections=1000
+KeepAlive=true
+KeepAliveTimeSec=300
+KeepAliveIntervalSec=75
+KeepAliveProbes=9
+
+[Install]
+WantedBy=sockets.target
+Also=simple-ntpd.service
