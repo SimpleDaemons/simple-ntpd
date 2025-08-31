@@ -82,8 +82,8 @@ set(SOURCES
     src/core/ntp_server.cpp
     src/core/ntp_connection.cpp
     src/core/ntp_packet.cpp
-    src/utils/logger.cpp
-    src/utils/config_parser.cpp
+    src/core/ntp_config.cpp
+    src/core/logger.cpp
 )
 
 # Core library source files (without main.cpp)
@@ -91,8 +91,8 @@ set(CORE_SOURCES
     src/core/ntp_server.cpp
     src/core/ntp_connection.cpp
     src/core/ntp_packet.cpp
-    src/utils/logger.cpp
-    src/utils/config_parser.cpp
+    src/core/ntp_config.cpp
+    src/core/logger.cpp
 )
 
 # Header files
