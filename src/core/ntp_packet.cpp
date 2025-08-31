@@ -5,7 +5,16 @@
 #include <sstream>
 #include <algorithm>
 #include <netinet/in.h>
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h>
+#define htobe64(x) OSSwapHostToBigInt64(x)
+#define be64toh(x) OSSwapBigToHostInt64(x)
+#elif defined(__linux__)
 #include <endian.h>
+#else
+#define htobe64(x) htonll(x)
+#define be64toh(x) ntohll(x)
+#endif
 
 namespace simple_ntpd {
 
