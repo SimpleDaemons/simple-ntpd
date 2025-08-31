@@ -58,19 +58,8 @@ bool NtpServer::start() {
         return false;
     }
     
-    // Start listening
-    if (!startListening()) {
-        logger_->error("Failed to start listening on socket");
-        closeSocket();
-        return false;
-    }
-    
     // Start worker threads
-    if (!startWorkerThreads()) {
-        logger_->error("Failed to start worker threads");
-        closeSocket();
-        return false;
-    }
+    startWorkerThreads();
     
     running_ = true;
     stats_.start_time = std::chrono::steady_clock::now();
@@ -152,14 +141,10 @@ bool NtpServer::bindSocket() {
     return true;
 }
 
-bool NtpServer::startListening() {
-    // For UDP, we don't need to call listen()
-    // The socket is ready to receive datagrams after binding
-    return true;
-}
 
-bool NtpServer::startWorkerThreads() {
-    size_t thread_count = config_->performance.worker_threads;
+
+void NtpServer::startWorkerThreads() {
+    size_t thread_count = config_->worker_threads;
     
     for (size_t i = 0; i < thread_count; ++i) {
         worker_threads_.emplace_back(&NtpServer::workerThreadFunction, this, i);
@@ -167,7 +152,6 @@ bool NtpServer::startWorkerThreads() {
     }
     
     workers_running_ = true;
-    return true;
 }
 
 void NtpServer::stopWorkerThreads() {

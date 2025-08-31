@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 BLBurns <contact@blburns.com>
+ * Copyright 2025 SimpleDaemons
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@
 #include <atomic>
 #include <mutex>
 #include <functional>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 namespace simple_ntpd {
 
@@ -164,6 +166,12 @@ private:
     bool initializeSocket();
     
     /**
+     * @brief Bind server socket
+     * @return true if successful, false otherwise
+     */
+    bool bindSocket();
+    
+    /**
      * @brief Close server socket
      */
     void closeSocket();
@@ -202,6 +210,26 @@ private:
      * @param thread_id Worker thread ID
      */
     void workerThreadFunction(size_t thread_id);
+    
+    /**
+     * @brief Process incoming packets
+     */
+    void processIncomingPackets();
+    
+    /**
+     * @brief Process a single packet
+     * @param data Packet data
+     * @param client_addr Client address
+     */
+    void processPacket(const std::vector<uint8_t>& data, const struct sockaddr_in& client_addr);
+    
+    /**
+     * @brief Get or create connection for client
+     * @param client_ip Client IP address
+     * @param client_port Client port
+     * @return Connection object
+     */
+    std::shared_ptr<NtpConnection> getOrCreateConnection(const std::string& client_ip, uint16_t client_port);
 
 private:
     std::shared_ptr<NtpConfig> config_;
