@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 BLBurns <contact@blburns.com>
+ * Copyright 2025 SimpleDaemons
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -108,12 +108,6 @@ public:
      * @param callback Callback function
      */
     void setConnectionCallback(std::function<void(const std::string&, bool)> callback);
-
-private:
-    /**
-     * @brief Main connection loop
-     */
-    void connectionLoop();
     
     /**
      * @brief Handle incoming packet
@@ -121,6 +115,12 @@ private:
      * @return true if handled successfully, false otherwise
      */
     bool handlePacket(const std::vector<uint8_t>& data);
+
+private:
+    /**
+     * @brief Main connection loop
+     */
+    void connectionLoop();
     
     /**
      * @brief Send response packet

@@ -108,7 +108,7 @@ bool NtpServer::initializeSocket() {
     
     server_socket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (server_socket_ == INVALID_SOCKET) {
-        logger_->error("Failed to create socket: " + std::strerror(errno));
+        logger_->error("Failed to create socket: " + std::string(std::strerror(errno)));
         return false;
     }
     
@@ -116,7 +116,7 @@ bool NtpServer::initializeSocket() {
     int opt = 1;
     if (setsockopt(server_socket_, SOL_SOCKET, SO_REUSEADDR, 
                    reinterpret_cast<const char*>(&opt), sizeof(opt)) < 0) {
-        logger_->warning("Failed to set SO_REUSEADDR: " + std::strerror(errno));
+        logger_->warning("Failed to set SO_REUSEADDR: " + std::string(std::strerror(errno)));
     }
     
     return true;
@@ -135,7 +135,7 @@ bool NtpServer::bindSocket() {
     
     if (bind(server_socket_, reinterpret_cast<struct sockaddr*>(&server_addr), 
              sizeof(server_addr)) < 0) {
-        logger_->error("Failed to bind socket: " + std::strerror(errno));
+        logger_->error("Failed to bind socket: " + std::string(std::strerror(errno)));
         return false;
     }
     
@@ -203,7 +203,7 @@ void NtpServer::processIncomingPackets() {
                 break;
             }
             
-            logger_->error("Failed to receive data: " + std::strerror(errno));
+            logger_->error("Failed to receive data: " + std::string(std::strerror(errno)));
             break;
         }
         
