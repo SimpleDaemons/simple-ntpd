@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 BLBurns <contact@blburns.com>
+ * Copyright 2025 SimpleDaemons
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 #pragma once
 
 #include "simple_ntpd/platform.hpp"
+#include "simple_ntpd/ntp_config.hpp"
 #include <vector>
 #include <cstdint>
 #include <chrono>

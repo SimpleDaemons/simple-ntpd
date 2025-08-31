@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 BLBurns <contact@blburns.com>
+ * Copyright 2025 SimpleDaemons
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ namespace simple_ntpd {
     
     // Windows-specific constants
     #define INVALID_SOCKET_VALUE INVALID_SOCKET
+    #define INVALID_SOCKET INVALID_SOCKET
     
 #elif defined(__APPLE__)
     #define PLATFORM_MACOS
@@ -63,6 +64,7 @@ namespace simple_ntpd {
     
     // Unix-specific constants
     #define INVALID_SOCKET_VALUE -1
+    #define INVALID_SOCKET -1
     
 #elif defined(__linux__)
     #define PLATFORM_LINUX
@@ -82,6 +84,7 @@ namespace simple_ntpd {
     
     // Unix-specific constants
     #define INVALID_SOCKET_VALUE -1
+    #define INVALID_SOCKET -1
     
 #else
     #error "Unsupported platform"
