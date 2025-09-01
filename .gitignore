@@ -9,6 +9,9 @@ CMakeFiles/Makefile
 *.config
 *.version
 
+# Allow build scripts
+!scripts/build/
+
 # Compiled Object files
 *.slo
 *.lo
