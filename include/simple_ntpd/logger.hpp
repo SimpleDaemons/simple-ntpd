@@ -35,6 +35,17 @@ enum class LogLevel {
 };
 
 /**
+ * @brief Log destination types
+ */
+enum class LogDestination {
+    CONSOLE = 0,
+    FILE = 1,
+    SYSLOG = 2,
+    BOTH = 3,      // Console and file
+    MULTIPLE = 4    // Console, file, and syslog
+};
+
+/**
  * @brief Logger class for NTP daemon
  * 
  * Provides thread-safe logging with configurable levels and output destinations.
@@ -43,19 +54,20 @@ enum class LogLevel {
 class Logger {
 public:
     /**
-     * @brief Constructor
-     * @param log_file Path to log file (optional)
-     * @param level Minimum log level to output
-     * @param enable_console Whether to output to console
+     * @brief Default constructor
      */
-    explicit Logger(const std::string& log_file = "", 
-                   LogLevel level = LogLevel::INFO,
-                   bool enable_console = true);
+    Logger();
     
     /**
      * @brief Destructor
      */
     ~Logger();
+    
+    /**
+     * @brief Get singleton instance
+     * @return Logger instance
+     */
+    static Logger& getInstance();
     
     /**
      * @brief Set log level
@@ -64,107 +76,76 @@ public:
     void setLevel(LogLevel level);
     
     /**
-     * @brief Get current log level
-     * @return Current log level
+     * @brief Set log destination
+     * @param destination Log destination
      */
-    LogLevel getLevel() const;
-    
-    /**
-     * @brief Enable/disable console output
-     * @param enable Whether to enable console output
-     */
-    void setConsoleOutput(bool enable);
+    void setDestination(LogDestination destination);
     
     /**
      * @brief Set log file
-     * @param log_file Path to log file
-     * @return true if successful, false otherwise
+     * @param filename Path to log file
      */
-    bool setLogFile(const std::string& log_file);
+    void setLogFile(const std::string& filename);
     
     /**
-     * @brief Log debug message
-     * @param message Message to log
+     * @brief Enable/disable syslog
+     * @param enable Whether to enable syslog
+     * @param facility Syslog facility
      */
-    void debug(const std::string& message);
-    
-    /**
-     * @brief Log info message
-     * @param message Message to log
-     */
-    void info(const std::string& message);
-    
-    /**
-     * @brief Log warning message
-     * @param message Message to log
-     */
-    void warning(const std::string& message);
-    
-    /**
-     * @brief Log error message
-     * @param message Message to log
-     */
-    void error(const std::string& message);
-    
-    /**
-     * @brief Log fatal message
-     * @param message Message to log
-     */
-    void fatal(const std::string& message);
+    void setSyslog(bool enable, int facility);
     
     /**
      * @brief Log message with custom level
      * @param level Log level
      * @param message Message to log
+     * @param file Source file (optional)
+     * @param line Source line (optional)
      */
-    void log(LogLevel level, const std::string& message);
+    void log(LogLevel level, const std::string& message, const std::string& file = "", int line = 0);
     
     /**
-     * @brief Get log level string representation
-     * @param level Log level
-     * @return String representation
-     */
-    static std::string levelToString(LogLevel level);
-    
-    /**
-     * @brief Parse log level from string
-     * @param level_str String representation of log level
-     * @return Log level, defaults to INFO if invalid
-     */
-    static LogLevel stringToLevel(const std::string& level_str);
-
-private:
-    /**
-     * @brief Internal logging method
-     * @param level Log level
+     * @brief Log debug message
      * @param message Message to log
+     * @param file Source file (optional)
+     * @param line Source line (optional)
      */
-    void logInternal(LogLevel level, const std::string& message);
+    void debug(const std::string& message, const std::string& file = "", int line = 0);
     
     /**
-     * @brief Format timestamp for logging
-     * @return Formatted timestamp string
+     * @brief Log info message
+     * @param message Message to log
+     * @param file Source file (optional)
+     * @param line Source line (optional)
      */
-    std::string formatTimestamp() const;
+    void info(const std::string& message, const std::string& file = "", int line = 0);
     
     /**
-     * @brief Write to log file
-     * @param message Formatted message to write
+     * @brief Log warning message
+     * @param message Message to log
+     * @param file Source file (optional)
+     * @param line Source line (optional)
      */
-    void writeToFile(const std::string& message);
+    void warning(const std::string& message, const std::string& file = "", int line = 0);
     
     /**
-     * @brief Write to console
-     * @param message Formatted message to write
+     * @brief Log error message
+     * @param message Message to log
+     * @param file Source file (optional)
+     * @param line Source line (optional)
      */
-    void writeToConsole(const std::string& message);
+    void error(const std::string& message, const std::string& file = "", int line = 0);
+    
+    /**
+     * @brief Log fatal message
+     * @param message Message to log
+     * @param file Source file (optional)
+     * @param line Source line (optional)
+     */
+    void fatal(const std::string& message, const std::string& file = "", int line = 0);
 
 private:
-    std::string log_file_path_;
-    std::ofstream log_file_;
-    LogLevel current_level_;
-    bool console_output_enabled_;
-    mutable std::mutex log_mutex_;
+    class Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 } // namespace simple_ntpd

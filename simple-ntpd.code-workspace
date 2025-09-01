@@ -3,9 +3,6 @@
 		{
 			"name": "simple-ntpd",
 			"path": "."
-		},
-		{
-			"path": "../simple-tftpd"
 		}
 	],
 	"settings": {}

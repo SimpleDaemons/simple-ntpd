@@ -28,7 +28,7 @@ using namespace simple_ntpd;
 
 // Global variables for signal handling
 std::shared_ptr<NtpServer> g_server;
-std::shared_ptr<Logger> g_logger;
+Logger* g_logger = nullptr;
 std::atomic<bool> g_shutdown_requested(false);
 
 /**
@@ -271,7 +271,16 @@ int main(int argc, char* argv[]) {
         }
         
         // Initialize logger
-        g_logger = std::make_shared<Logger>(config->log_file, config->log_level, config->enable_console_logging);
+        g_logger = &Logger::getInstance();
+        
+        // Configure logger
+        g_logger->setLogFile(config->log_file);
+        g_logger->setLevel(config->log_level);
+        if (config->enable_console_logging) {
+            g_logger->setDestination(LogDestination::CONSOLE);
+        } else {
+            g_logger->setDestination(LogDestination::FILE);
+        }
         
         // Log startup
         g_logger->info("Starting simple-ntpd v0.1.0");
@@ -281,7 +290,7 @@ int main(int argc, char* argv[]) {
         initializeSignalHandlers();
         
         // Create and start server
-        g_server = std::make_shared<NtpServer>(config, g_logger);
+        g_server = std::make_shared<NtpServer>(config, std::shared_ptr<Logger>(&Logger::getInstance(), [](Logger*){}));
         
         if (!g_server->start()) {
             g_logger->error("Failed to start NTP server");

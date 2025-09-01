@@ -272,4 +272,38 @@ std::chrono::milliseconds NtpPacketHandler::calculateOffset(
     return std::chrono::duration_cast<std::chrono::milliseconds>(offset);
 }
 
+// NtpTimestamp implementation
+NtpTimestamp NtpTimestamp::fromSystemTime(const std::chrono::system_clock::time_point& time) {
+    // Convert system time to NTP timestamp
+    // NTP epoch starts at January 1, 1900, system_clock epoch starts at January 1, 1970
+    // Difference is 70 years + 17 leap days = 2208988800 seconds
+    
+    constexpr uint64_t NTP_EPOCH_OFFSET = 2208988800ULL;
+    
+    auto duration = time.time_since_epoch();
+    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    auto fraction = std::chrono::duration_cast<std::chrono::nanoseconds>(duration - seconds);
+    
+    // Convert fraction to NTP fraction (2^32 units)
+    uint32_t ntp_fraction = static_cast<uint32_t>((fraction.count() * 4294967296ULL) / 1000000000ULL);
+    
+    return NtpTimestamp(static_cast<uint32_t>(seconds.count() + NTP_EPOCH_OFFSET), ntp_fraction);
+}
+
+std::chrono::system_clock::time_point NtpTimestamp::toSystemTime() const {
+    // Convert NTP timestamp to system time
+    constexpr uint64_t NTP_EPOCH_OFFSET = 2208988800ULL;
+    
+    // Convert everything to microseconds to match system_clock precision
+    auto total_microseconds = std::chrono::microseconds((static_cast<uint64_t>(seconds - NTP_EPOCH_OFFSET) * 1000000ULL) + 
+                                                       ((static_cast<uint64_t>(fraction) * 1000000ULL) / 4294967296ULL));
+    
+    // Create time point from epoch and add the duration
+    return std::chrono::system_clock::from_time_t(0) + total_microseconds;
+}
+
+NtpTimestamp NtpTimestamp::now() {
+    return fromSystemTime(std::chrono::system_clock::now());
+}
+
 } // namespace simple_ntpd

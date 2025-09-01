@@ -34,6 +34,7 @@ $(BUILD_DIR):
 # Configure with CMake
 .PHONY: configure
 configure: $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) ..
 
 # Build the project
@@ -43,19 +44,24 @@ build: configure
 
 # Build with debug information
 .PHONY: debug
-debug: CMAKE_OPTS += -DCMAKE_BUILD_TYPE=Debug
-debug: build
+debug: $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DENABLE_LOGGING=ON -DENABLE_IPV6=ON ..
+	$(MAKE) -C $(BUILD_DIR)
 
 # Build with optimization
 .PHONY: release
-release: CMAKE_OPTS += -DCMAKE_BUILD_TYPE=Release
-release: build
+release: $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DENABLE_LOGGING=ON -DENABLE_IPV6=ON ..
+	$(MAKE) -C $(BUILD_DIR)
 
 # Build with sanitizers
 .PHONY: sanitize
-sanitize: CMAKE_OPTS += -DCMAKE_BUILD_TYPE=Debug
-sanitize: CMAKE_OPTS += -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
-sanitize: build
+sanitize: $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DENABLE_LOGGING=ON -DENABLE_IPV6=ON -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" ..
+	$(MAKE) -C $(BUILD_DIR)
 
 # Clean build directory
 .PHONY: clean
@@ -108,14 +114,22 @@ package-source: build
 
 # Build for specific platform
 .PHONY: build-macos
-build-macos: CMAKE_OPTS += -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
-build-macos: build
+build-macos: $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" ..
+	$(MAKE) -C $(BUILD_DIR)
 
 .PHONY: build-linux
-build-linux: build
+build-linux: $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) ..
+	$(MAKE) -C $(BUILD_DIR)
 
 .PHONY: build-windows
-build-windows: build
+build-windows: $(BUILD_DIR)
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) ..
+	$(MAKE) -C $(BUILD_DIR)
 
 # Development targets
 .PHONY: format
