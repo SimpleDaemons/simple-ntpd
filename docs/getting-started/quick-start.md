@@ -14,7 +14,7 @@ Get your Simple NTP Daemon server running in 5 minutes! This guide covers the fa
 
 ```bash
 # Clone the repository
-git clone https://github.com/blburns/simple-ntpd.git
+git clone https://github.com/SimpleDaemons/simple-ntpd.git
 cd simple-ntpd
 
 # Build the project

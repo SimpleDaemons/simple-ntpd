@@ -420,11 +420,16 @@ ifeq ($(PLATFORM),windows)
 	@echo "Consider using the build script: scripts\\build-windows.bat --deps"
 else
 	@echo "Running security scan..."
-	@if command -v bandit >/dev/null 2>&1 && command -v semgrep >/dev/null 2>&1; then \
+	@if command -v bandit >/dev/null 2>&1; then \
 		echo "Running bandit security scan..."; \
 		bandit -r $(SRC_DIR); \
-		echo "Running semgrep security scan..."; \
-		semgrep --config=auto $(SRC_DIR); \
+		if command -v semgrep >/dev/null 2>&1; then \
+			echo "Running semgrep security scan..."; \
+			semgrep --config=auto $(SRC_DIR); \
+		else \
+			echo "Note: semgrep not found. Skipping semgrep scan."; \
+			echo "To install semgrep: pip3 install semgrep"; \
+		fi; \
 		echo "Security scan completed successfully"; \
 	else \
 		echo "Security scanning tools not found. Installing development tools..."; \
@@ -536,7 +541,9 @@ dev-deps:
 ifeq ($(PLATFORM),macos)
 	@echo "Installing development tools on macOS..."
 	@echo "Installing available packages from MacPorts..."
-	sudo port install cppcheck py3-bandit semgrep
+	sudo port install cppcheck bandit
+	@echo "Note: semgrep is optional and may fail to install from MacPorts."
+	@echo "You can install it manually with: pip3 install semgrep"
 	@echo "Note: clang-format is not available in MacPorts."
 	@echo "To install clang-format, you can:"
 	@echo "  1. Use Homebrew: brew install clang-format"

@@ -209,8 +209,8 @@ enable_async_io = false          # Asynchronous I/O
 ```ini
 # Response caching
 enable_response_cache = true     # Cache NTP responses
-cache_ttl = 300                 # Cache TTL in seconds
-max_cache_size = 1000           # Maximum cache entries
+cache_ttl = 300                  # Cache TTL in seconds
+max_cache_size = 1000            # Maximum cache entries
 
 # Performance monitoring
 enable_performance_monitoring = true
