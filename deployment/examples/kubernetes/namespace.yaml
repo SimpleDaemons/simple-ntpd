@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ntp
+  labels:
+    name: ntp
+    purpose: ntp-service
+  annotations:
+    description: "Namespace for Simple NTP Daemon deployment"

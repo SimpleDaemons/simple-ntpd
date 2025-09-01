@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-ntpd
+  namespace: ntp
+  labels:
+    app: simple-ntpd
+    version: v1.0.0
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: simple-ntpd
+  template:
+    metadata:
+      labels:
+        app: simple-ntpd
+        version: v1.0.0
+    spec:
+      serviceAccountName: simple-ntpd-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: simple-ntpd
+        image: simple-ntpd:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 123
+          protocol: UDP
+          name: ntp
+        env:
+        - name: SIMPLE_NTPD_LISTEN_ADDRESS
+          value: "0.0.0.0"
+        - name: SIMPLE_NTPD_LISTEN_PORT
+          value: "123"
+        - name: SIMPLE_NTPD_STRATUM
+          value: "2"
+        - name: SIMPLE_NTPD_LOG_LEVEL
+          value: "INFO"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/simple-ntpd
+          readOnly: true
+        - name: logs
+          mountPath: /var/log/simple-ntpd
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "ntpdate -q localhost > /dev/null 2>&1"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "ntpdate -q localhost > /dev/null 2>&1"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: config
+        configMap:
+          name: simple-ntpd-config
+      - name: logs
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - simple-ntpd
+              topologyKey: kubernetes.io/hostname
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"

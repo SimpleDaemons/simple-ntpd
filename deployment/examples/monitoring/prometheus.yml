@@ -1,0 +1,123 @@
+# Prometheus configuration for monitoring Simple NTP Daemon
+# Add this to your prometheus.yml or create a separate file
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "simple-ntpd-rules.yml"
+
+scrape_configs:
+  # Simple NTP Daemon metrics endpoint
+  - job_name: 'simple-ntpd'
+    static_configs:
+      - targets: ['localhost:8080']
+        labels:
+          service: 'simple-ntpd'
+          environment: 'production'
+          instance: 'ntp-server-01'
+
+    # If using multiple instances
+    # - targets: ['ntp-server-01:8080', 'ntp-server-02:8080', 'ntp-server-03:8080']
+
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+
+    # Basic authentication (if enabled)
+    # basic_auth:
+    #   username: 'monitoring'
+    #   password: 'your-password'
+
+    # TLS configuration (if using HTTPS)
+    # tls_config:
+    #   ca_file: '/path/to/ca.crt'
+    #   cert_file: '/path/to/client.crt'
+    #   key_file: '/path/to/client.key'
+    #   insecure_skip_verify: false
+
+    # Relabeling rules
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '${1}'
+
+      - source_labels: [__address__]
+        target_label: __metrics_path__
+        regex: '([^:]+):(\d+)'
+        replacement: '/metrics'
+
+      # Add custom labels
+      - source_labels: [__address__]
+        target_label: ntp_stratum
+        regex: 'ntp-server-(\d+)'
+        replacement: '${1}'
+
+      - source_labels: [__address__]
+        target_label: datacenter
+        regex: 'ntp-server-(\d+)'
+        replacement: 'dc-01'
+
+  # NTP service health checks
+  - job_name: 'ntp-health'
+    static_configs:
+      - targets: ['localhost:8080']
+        labels:
+          service: 'simple-ntpd-health'
+          check_type: 'health'
+
+    scrape_interval: 30s
+    metrics_path: '/health'
+
+    # Parse health check responses
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'ntp_up'
+        action: keep
+
+  # Blackbox exporter for external NTP checks
+  - job_name: 'ntp-blackbox'
+    metrics_path: /probe
+    params:
+      module: [ntp]
+      target: ['localhost:123']
+
+    static_configs:
+      - targets:
+        - localhost:123
+        - ntp-server-01:123
+        - ntp-server-02:123
+
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+
+      - source_labels: [__param_target]
+        target_label: instance
+
+      - source_labels: []
+        target_label: __address__
+        replacement: localhost:9115  # Blackbox exporter address
+
+  # Node exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+        labels:
+          service: 'node-exporter'
+          environment: 'production'
+
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+
+# Alerting rules (if using Alertmanager)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - localhost:9093  # Alertmanager address
+
+# Recording rules for common queries
+rule_files:
+  - "simple-ntpd-rules.yml"

@@ -6,23 +6,84 @@ This directory contains all the necessary files and scripts for deploying the Si
 
 ```
 deployment/
-├── README.md              # This file
-├── systemd/               # Systemd service files
+├── README.md                    # This file
+├── DEPLOYMENT_CHECKLIST.md      # Comprehensive deployment checklist
+├── QUICK_START_GUIDES.md        # Platform-specific quick start guides
+├── systemd/                     # Systemd service files
 │   ├── simple-ntpd.service
 │   ├── simple-ntpd.socket
 │   └── simple-ntpd.target
-├── init.d/                # Traditional init.d scripts
+├── init.d/                      # Traditional init.d scripts
 │   └── simple-ntpd
-├── scripts/               # Deployment scripts
-│   └── install.sh
-└── examples/              # Deployment examples
-    ├── docker/
-    └── kubernetes/
+├── launchd/                     # macOS launchd service
+│   └── com.simpledaemons.simple-ntpd.plist
+├── windows/                     # Windows service installation
+│   ├── install-service.bat
+│   ├── install-service.ps1
+│   └── simple-ntpd-service.cpp
+├── configs/                     # Configuration templates
+│   ├── production.conf          # Production configuration
+│   └── development.conf         # Development configuration
+├── templates/                   # System configuration templates
+│   ├── logrotate.conf          # Log rotation configuration
+│   └── firewall.conf           # Firewall configuration templates
+├── examples/                    # Deployment examples
+│   ├── docker/                 # Docker deployment
+│   │   ├── docker-compose.yml
+│   │   └── README.md
+│   ├── kubernetes/             # Kubernetes deployment
+│   │   ├── deployment.yaml
+│   │   ├── service.yaml
+│   │   ├── configmap.yaml
+│   │   ├── namespace.yaml
+│   │   ├── serviceaccount.yaml
+│   │   └── README.md
+│   └── monitoring/             # Monitoring and observability
+│       ├── prometheus.yml      # Prometheus configuration
+│       ├── alerting-rules.yml  # Alerting rules
+│       └── README.md           # Monitoring guide
+└── scripts/                    # Deployment scripts
+    └── install.sh
 ```
 
 ## Deployment Methods
 
-### 1. Automated Installation Script
+### 1. Quick Start Guides
+
+For platform-specific deployment instructions, see:
+- **Linux**: [Linux Quick Start Guide](QUICK_START_GUIDES.md#linux-quick-start-systemd)
+- **Docker**: [Docker Quick Start Guide](QUICK_START_GUIDES.md#docker-quick-start)
+- **Kubernetes**: [Kubernetes Quick Start Guide](QUICK_START_GUIDES.md#kubernetes-quick-start)
+- **macOS**: [macOS Quick Start Guide](QUICK_START_GUIDES.md#macos-quick-start)
+- **Windows**: [Windows Quick Start Guide](QUICK_START_GUIDES.md#windows-quick-start)
+
+### 2. Configuration Templates
+
+Ready-to-use configuration files:
+- **Production**: [Production Configuration](configs/production.conf) - Optimized for high-performance production environments
+- **Development**: [Development Configuration](configs/development.conf) - Suitable for development and testing
+
+### 3. System Integration Templates
+
+- **Log Rotation**: [Logrotate Configuration](templates/logrotate.conf) - Automatic log management
+- **Firewall Rules**: [Firewall Configuration](templates/firewall.conf) - Platform-specific firewall setup
+
+### 4. Container Deployment
+
+- **Docker**: Complete Docker Compose setup with [Docker Guide](examples/docker/README.md)
+- **Kubernetes**: Production-ready Kubernetes manifests with [Kubernetes Guide](examples/kubernetes/README.md)
+
+### 5. Monitoring and Observability
+
+- **Prometheus**: [Prometheus Configuration](examples/monitoring/prometheus.yml) - Metrics collection
+- **Alerting**: [Alerting Rules](examples/monitoring/alerting-rules.yml) - Comprehensive alerting
+- **Monitoring Guide**: [Complete Monitoring Guide](examples/monitoring/README.md) - Setup and best practices
+
+### 6. Deployment Checklist
+
+Use the [Deployment Checklist](DEPLOYMENT_CHECKLIST.md) to ensure complete and secure deployment.
+
+### 7. Automated Installation Script
 
 The `scripts/install.sh` script provides a comprehensive, automated installation process:
 

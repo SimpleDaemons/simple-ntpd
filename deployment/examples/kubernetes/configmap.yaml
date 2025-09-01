@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: simple-ntpd-config
+  namespace: ntp
+  labels:
+    app: simple-ntpd
+data:
+  simple-ntpd.conf: |
+    # Simple NTP Daemon Configuration
+    # Generated for Kubernetes deployment
+
+    [network]
+    listen_address = 0.0.0.0
+    listen_port = 123
+    enable_ipv6 = true
+    max_clients = 1000
+
+    [ntp_server]
+    stratum = 2
+    reference_clock = "LOCAL"
+    upstream_servers = [
+        "pool.ntp.org",
+        "time.nist.gov",
+        "time.google.com"
+    ]
+    sync_interval = 60
+
+    [logging]
+    level = "INFO"
+    output = "file"
+    log_file = "/var/log/simple-ntpd/simple-ntpd.log"
+    max_file_size = "10MB"
+    max_files = 5
+
+    [security]
+    enable_authentication = false
+    allow_query_from = ["0.0.0.0/0"]
+
+    [performance]
+    worker_threads = 4
+    max_packet_size = 1024
+    connection_timeout = 30

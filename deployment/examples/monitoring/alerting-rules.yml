@@ -1,0 +1,244 @@
+# Prometheus Alerting Rules for Simple NTP Daemon
+# Save this as simple-ntpd-rules.yml and reference in prometheus.yml
+
+groups:
+  - name: simple-ntpd
+    rules:
+      # NTP Service Availability
+      - alert: NTPServiceDown
+        expr: up{job="simple-ntpd"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ntp
+        annotations:
+          summary: "NTP service is down on {{ $labels.instance }}"
+          description: "Simple NTP Daemon service has been down for more than 1 minute on {{ $labels.instance }}"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # NTP Health Check Failures
+      - alert: NTPHealthCheckFailed
+        expr: ntp_up == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "NTP health check failed on {{ $labels.instance }}"
+          description: "NTP service health check is failing on {{ $labels.instance }} for more than 2 minutes"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # High NTP Response Time
+      - alert: NTPHighResponseTime
+        expr: ntp_response_time_seconds > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "High NTP response time on {{ $labels.instance }}"
+          description: "NTP response time is {{ $value }}s on {{ $labels.instance }}, which is above the threshold of 0.1s"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/performance-tuning"
+
+      # NTP Sync Issues
+      - alert: NTPSyncFailure
+        expr: ntp_sync_status == 0
+        for: 10m
+        labels:
+          severity: critical
+          service: ntp
+        annotations:
+          summary: "NTP synchronization failed on {{ $labels.instance }}"
+          description: "NTP service is unable to synchronize with upstream servers on {{ $labels.instance }} for more than 10 minutes"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # High NTP Error Rate
+      - alert: NTPHighErrorRate
+        expr: rate(ntp_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "High NTP error rate on {{ $labels.instance }}"
+          description: "NTP error rate is {{ $value }} errors/second on {{ $labels.instance }}, which is above the threshold"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # NTP Client Connection Issues
+      - alert: NTPClientConnectionIssues
+        expr: ntp_active_connections < 1
+        for: 5m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "No NTP client connections on {{ $labels.instance }}"
+          description: "No active NTP client connections detected on {{ $labels.instance }} for more than 5 minutes"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # High Memory Usage
+      - alert: NTPHighMemoryUsage
+        expr: (ntp_memory_bytes / ntp_memory_limit_bytes) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "NTP service is using {{ $value | humanizePercentage }} of available memory on {{ $labels.instance }}"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/performance-tuning"
+
+      # High CPU Usage
+      - alert: NTPHighCPUUsage
+        expr: rate(ntp_cpu_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "NTP service CPU usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/performance-tuning"
+
+      # NTP Packet Loss
+      - alert: NTPHighPacketLoss
+        expr: (ntp_packets_dropped_total / ntp_packets_received_total) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "High packet loss on {{ $labels.instance }}"
+          description: "NTP packet loss rate is {{ $value | humanizePercentage }} on {{ $labels.instance }}, which is above the 5% threshold"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # NTP Stratum Changes
+      - alert: NTPStratumChanged
+        expr: changes(ntp_stratum[1h]) > 0
+        for: 0m
+        labels:
+          severity: info
+          service: ntp
+        annotations:
+          summary: "NTP stratum changed on {{ $labels.instance }}"
+          description: "NTP stratum level has changed on {{ $labels.instance }} in the last hour"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/configuration"
+
+      # NTP Upstream Server Issues
+      - alert: NTPUpstreamServerDown
+        expr: ntp_upstream_server_status == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "NTP upstream server down on {{ $labels.instance }}"
+          description: "Upstream NTP server {{ $labels.upstream_server }} is unreachable from {{ $labels.instance }}"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # NTP Configuration Issues
+      - alert: NTPConfigurationError
+        expr: ntp_configuration_valid == 0
+        for: 0m
+        labels:
+          severity: critical
+          service: ntp
+        annotations:
+          summary: "NTP configuration error on {{ $labels.instance }}"
+          description: "NTP configuration is invalid on {{ $labels.instance }}: {{ $labels.error_message }}"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/configuration"
+
+      # NTP Service Restart
+      - alert: NTPServiceRestarted
+        expr: changes(ntp_process_start_time_seconds[5m]) > 0
+        for: 0m
+        labels:
+          severity: info
+          service: ntp
+        annotations:
+          summary: "NTP service restarted on {{ $labels.instance }}"
+          description: "NTP service has been restarted on {{ $labels.instance }} in the last 5 minutes"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # NTP Log File Issues
+      - alert: NTPLogFileError
+        expr: ntp_log_write_errors_total > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: ntp
+        annotations:
+          summary: "NTP log file write errors on {{ $labels.instance }}"
+          description: "NTP service is experiencing log file write errors on {{ $labels.instance }}"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+      # NTP Network Interface Issues
+      - alert: NTPNetworkInterfaceDown
+        expr: ntp_network_interface_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: ntp
+        annotations:
+          summary: "NTP network interface down on {{ $labels.instance }}"
+          description: "Network interface used by NTP service is down on {{ $labels.instance }}"
+          runbook_url: "https://github.com/your-repo/simple-ntpd/docs/troubleshooting"
+
+  # System-level alerts
+  - name: system
+    rules:
+      # High System Load
+      - alert: SystemHighLoad
+        expr: node_load1 > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High system load on {{ $labels.instance }}"
+          description: "System load is {{ $value }} on {{ $labels.instance }}"
+
+      # Disk Space Low
+      - alert: SystemDiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space is {{ $value | humanizePercentage }} available on {{ $labels.instance }}"
+
+      # Memory Low
+      - alert: SystemMemoryLow
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "Low memory on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} available on {{ $labels.instance }}"
+
+# Recording rules for common queries
+  - name: recording
+    rules:
+      # NTP availability percentage
+      - record: ntp:availability_percentage
+        expr: (up{job="simple-ntpd"} * 100)
+
+      # NTP response time average
+      - record: ntp:response_time_average
+        expr: avg(ntp_response_time_seconds)
+
+      # NTP error rate per minute
+      - record: ntp:error_rate_per_minute
+        expr: rate(ntp_errors_total[1m])
+
+      # NTP active connections average
+      - record: ntp:active_connections_average
+        expr: avg(ntp_active_connections)
+
+      # NTP memory usage percentage
+      - record: ntp:memory_usage_percentage
+        expr: (ntp_memory_bytes / ntp_memory_limit_bytes) * 100
