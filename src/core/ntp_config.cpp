@@ -15,7 +15,6 @@
  */
 
 #include "simple_ntpd/ntp_config.hpp"
-#include "simple_ntpd/logger.hpp"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -23,34 +22,7 @@
 
 namespace simple_ntpd {
 
-namespace {
-    std::string trim(const std::string& str) {
-        size_t start = str.find_first_not_of(" \t\r\n");
-        if (start == std::string::npos) return "";
-        size_t end = str.find_last_not_of(" \t\r\n");
-        return str.substr(start, end - start + 1);
-    }
-
-    std::string toLower(const std::string& str) {
-        std::string result = str;
-        std::transform(result.begin(), result.end(), result.begin(), ::tolower);
-        return result;
-    }
-
-    bool parseBool(const std::string& value) {
-        std::string lower = toLower(trim(value));
-        return lower == "true" || lower == "yes" || lower == "1" || lower == "on";
-    }
-
-    int parseInt(const std::string& value) {
-        try {
-            return std::stoi(trim(value));
-        } catch (const std::exception&) {
-            return 0;
-        }
-    }
-}
-
+// NtpConfig implementation
 NtpConfig::NtpConfig() {
     setDefaults();
 }
@@ -90,160 +62,271 @@ void NtpConfig::setDefaults() {
     enable_leap_second_handling = true;
 }
 
-bool NtpConfig::loadFromFile(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        Logger::getInstance().error("Failed to open configuration file: " + filename);
+bool NtpConfig::loadFromFile(const std::string& config_file) {
+    return parseConfigFile(config_file);
+}
+
+bool NtpConfig::loadFromCommandLine(int argc, char* argv[]) {
+    // Simple command line parsing for now
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        
+        if (arg.substr(0, 2) == "--") {
+            size_t pos = arg.find('=');
+            if (pos != std::string::npos) {
+                std::string key = arg.substr(2, pos - 2);
+                std::string value = arg.substr(pos + 1);
+                parseCommandLineArg(key, value);
+            }
+        }
+    }
+    
+    return true;
+}
+
+bool NtpConfig::validate() const {
+    // Validate listen port
+    if (listen_port < 1 || listen_port > 65535) {
         return false;
     }
+    
+    // Validate stratum
+    if (static_cast<int>(stratum) < 0 || static_cast<int>(stratum) > 15) {
+        return false;
+    }
+    
+    // Validate worker threads
+    if (worker_threads < 1 || worker_threads > 64) {
+        return false;
+    }
+    
+    // Validate max connections
+    if (max_connections < 1 || max_connections > 100000) {
+        return false;
+    }
+    
+    // Validate max packet size
+    if (max_packet_size < 48 || max_packet_size > 8192) {
+        return false;
+    }
+    
+    return true;
+}
 
+std::string NtpConfig::toString() const {
+    std::stringstream ss;
+    ss << "NTP Configuration:\n";
+    ss << "  Listen Address: " << listen_address << ":" << listen_port << "\n";
+    ss << "  IPv6 Enabled: " << (enable_ipv6 ? "Yes" : "No") << "\n";
+    ss << "  Max Connections: " << max_connections << "\n";
+    ss << "  Stratum: " << static_cast<int>(stratum) << "\n";
+    ss << "  Reference Clock: " << reference_clock << "\n";
+    ss << "  Worker Threads: " << worker_threads << "\n";
+    ss << "  Log Level: " << static_cast<int>(log_level) << "\n";
+    ss << "  Log File: " << log_file << "\n";
+    ss << "  Console Logging: " << (enable_console_logging ? "Yes" : "No") << "\n";
+    ss << "  Syslog: " << (enable_syslog ? "Yes" : "No") << "\n";
+    ss << "  Authentication: " << (enable_authentication ? "Yes" : "No") << "\n";
+    ss << "  Statistics: " << (enable_statistics ? "Yes" : "No") << "\n";
+    ss << "  Drift Compensation: " << (enable_drift_compensation ? "Yes" : "No") << "\n";
+    ss << "  Leap Second Handling: " << (enable_leap_second_handling ? "Yes" : "No") << "\n";
+    
+    return ss.str();
+}
+
+bool NtpConfig::parseConfigFile(const std::string& config_file) {
+    std::ifstream file(config_file);
+    if (!file.is_open()) {
+        return false;
+    }
+    
     std::string line;
     std::string current_section;
     int line_number = 0;
-    bool success = true;
-
+    
     while (std::getline(file, line)) {
         line_number++;
-        line = trim(line);
         
+        // Skip empty lines and comments
         if (line.empty() || line[0] == '#' || line[0] == ';') {
             continue;
         }
         
+        // Remove leading/trailing whitespace
+        line.erase(0, line.find_first_not_of(" \t"));
+        line.erase(line.find_last_not_of(" \t") + 1);
+        
+        // Check for section headers [section]
         if (line[0] == '[' && line[line.length() - 1] == ']') {
             current_section = line.substr(1, line.length() - 2);
             continue;
         }
         
+        // Parse key=value pairs
         size_t pos = line.find('=');
         if (pos != std::string::npos) {
-            std::string key = trim(line.substr(0, pos));
-            std::string value = trim(line.substr(pos + 1));
+            std::string key = line.substr(0, pos);
+            std::string value = line.substr(pos + 1);
             
-            if (!parseConfigValue(current_section, key, value)) {
-                Logger::getInstance().warning("Invalid configuration at line " + 
-                                           std::to_string(line_number) + ": " + line);
-                success = false;
+            // Remove quotes from value if present
+            if (value.length() >= 2 && value[0] == '"' && value[value.length() - 1] == '"') {
+                value = value.substr(1, value.length() - 2);
+            }
+            
+            // Parse the configuration value
+            if (!parseCommandLineArg(key, value)) {
+                // Log warning about invalid configuration
+                continue;
             }
         }
     }
     
-    file.close();
-    
-    if (success) {
-        Logger::getInstance().info("Configuration loaded successfully from: " + filename);
-    }
-    
-    return success;
+    return true;
 }
 
-bool NtpConfig::parseConfigValue(const std::string& section, const std::string& key, const std::string& value) {
-    std::string lower_key = toLower(key);
+bool NtpConfig::parseCommandLineArg(const std::string& key, const std::string& value) {
+    // Convert key to lowercase for case-insensitive comparison
+    std::string lower_key = key;
+    std::transform(lower_key.begin(), lower_key.end(), lower_key.begin(), ::tolower);
     
-    if (section == "network" || section.empty()) {
-        if (lower_key == "listen_address") {
-            listen_address = value;
-            return true;
-        } else if (lower_key == "listen_port") {
-            listen_port = parseInt(value);
-            return true;
-        } else if (lower_key == "enable_ipv6") {
-            enable_ipv6 = parseBool(value);
-            return true;
-        } else if (lower_key == "max_connections") {
-            int max_conn = parseInt(value);
-            if (max_conn > 0) {
-                max_connections = max_conn;
-                return true;
-            }
+    if (lower_key == "listen_address" || lower_key == "bind_address") {
+        listen_address = value;
+    } else if (lower_key == "listen_port" || lower_key == "port") {
+        try {
+            listen_port = static_cast<port_t>(std::stoi(value));
+        } catch (const std::exception&) {
+            return false;
         }
-    }
-    
-    if (section == "ntp_server" || section.empty()) {
-        if (lower_key == "stratum") {
-            int stratum_val = parseInt(value);
-            if (stratum_val >= 1 && stratum_val <= 15) {
+    } else if (lower_key == "enable_ipv6" || lower_key == "ipv6") {
+        enable_ipv6 = (value == "true" || value == "1" || value == "yes");
+    } else if (lower_key == "max_connections" || lower_key == "max_conn") {
+        try {
+            max_connections = std::stoi(value);
+        } catch (const std::exception&) {
+            return false;
+        }
+    } else if (lower_key == "stratum") {
+        try {
+            int stratum_val = std::stoi(value);
+            if (stratum_val >= 0 && stratum_val <= 15) {
                 stratum = static_cast<NtpStratum>(stratum_val);
-                return true;
             }
-        } else if (lower_key == "reference_clock") {
-            reference_clock = value;
-            return true;
-        } else if (lower_key == "sync_interval") {
-            int interval = parseInt(value);
-            if (interval > 0) {
-                sync_interval = std::chrono::seconds(interval);
-                return true;
-            }
-        } else if (lower_key == "timeout") {
-            int timeout_val = parseInt(value);
-            if (timeout_val > 0) {
-                timeout = std::chrono::milliseconds(timeout_val);
-                return true;
+        } catch (const std::exception&) {
+            return false;
+        }
+    } else if (lower_key == "reference_clock" || lower_key == "ref_clock") {
+        reference_clock = value;
+    } else if (lower_key == "upstream_servers" || lower_key == "servers") {
+        // Parse comma-separated list
+        std::stringstream ss(value);
+        std::string server;
+        upstream_servers.clear();
+        while (std::getline(ss, server, ',')) {
+            // Remove whitespace
+            server.erase(0, server.find_first_not_of(" \t"));
+            server.erase(server.find_last_not_of(" \t") + 1);
+            if (!server.empty()) {
+                upstream_servers.push_back(server);
             }
         }
-    }
-    
-    if (section == "logging" || section.empty()) {
-        if (lower_key == "level") {
-            std::string level = toLower(value);
-            if (level == "debug") log_level = LogLevel::DEBUG;
-            else if (level == "info") log_level = LogLevel::INFO;
-            else if (level == "warning") log_level = LogLevel::WARNING;
-            else if (level == "error") log_level = LogLevel::ERROR;
-            else if (level == "fatal") log_level = LogLevel::FATAL;
-            else return false;
-            return true;
-        } else if (lower_key == "log_file") {
-            log_file = value;
-            return true;
-        } else if (lower_key == "enable_console_logging") {
-            enable_console_logging = parseBool(value);
-            return true;
-        } else if (lower_key == "enable_syslog") {
-            enable_syslog = parseBool(value);
-            return true;
+    } else if (lower_key == "sync_interval") {
+        try {
+            int seconds = std::stoi(value);
+            sync_interval = std::chrono::seconds(seconds);
+        } catch (const std::exception&) {
+            return false;
         }
-    }
-    
-    if (section == "performance" || section.empty()) {
-        if (lower_key == "worker_threads") {
-            int threads = parseInt(value);
-            if (threads > 0) {
+    } else if (lower_key == "timeout") {
+        try {
+            int ms = std::stoi(value);
+            timeout = std::chrono::milliseconds(ms);
+        } catch (const std::exception&) {
+            return false;
+        }
+    } else if (lower_key == "log_level" || lower_key == "loglevel") {
+        try {
+            int level = std::stoi(value);
+            if (level >= 0 && level <= 4) {
+                log_level = static_cast<LogLevel>(level);
+            }
+        } catch (const std::exception&) {
+            return false;
+        }
+    } else if (lower_key == "log_file" || lower_key == "logfile") {
+        log_file = value;
+    } else if (lower_key == "enable_console_logging" || lower_key == "console_log") {
+        enable_console_logging = (value == "true" || value == "1" || value == "yes");
+    } else if (lower_key == "enable_syslog" || lower_key == "syslog") {
+        enable_syslog = (value == "true" || value == "1" || value == "yes");
+    } else if (lower_key == "enable_authentication" || lower_key == "auth") {
+        enable_authentication = (value == "true" || value == "1" || value == "yes");
+    } else if (lower_key == "authentication_key" || lower_key == "auth_key") {
+        authentication_key = value;
+    } else if (lower_key == "restrict_queries" || lower_key == "restrict") {
+        restrict_queries = (value == "true" || value == "1" || value == "yes");
+    } else if (lower_key == "allowed_clients" || lower_key == "allow") {
+        // Parse comma-separated list
+        std::stringstream ss(value);
+        std::string client;
+        allowed_clients.clear();
+        while (std::getline(ss, client, ',')) {
+            client.erase(0, client.find_first_not_of(" \t"));
+            client.erase(client.find_last_not_of(" \t") + 1);
+            if (!client.empty()) {
+                allowed_clients.push_back(client);
+            }
+        }
+    } else if (lower_key == "denied_clients" || lower_key == "deny") {
+        // Parse comma-separated list
+        std::stringstream ss(value);
+        std::string client;
+        denied_clients.clear();
+        while (std::getline(ss, client, ',')) {
+            client.erase(0, client.find_first_not_of(" \t"));
+            client.erase(client.find_last_not_of(" \t") + 1);
+            if (!client.empty()) {
+                denied_clients.push_back(client);
+            }
+        }
+    } else if (lower_key == "worker_threads" || lower_key == "threads") {
+        try {
+            size_t threads = std::stoul(value);
+            if (threads >= 1 && threads <= 64) {
                 worker_threads = threads;
-                return true;
             }
-        } else if (lower_key == "max_packet_size") {
-            int size = parseInt(value);
-            if (size > 0) {
-                max_packet_size = size;
-                return true;
-            }
+        } catch (const std::exception&) {
+            return false;
         }
+    } else if (lower_key == "max_packet_size" || lower_key == "packet_size") {
+        try {
+            size_t size = std::stoul(value);
+            if (size >= 48 && size <= 8192) {
+                max_packet_size = size;
+            }
+        } catch (const std::exception&) {
+            return false;
+        }
+    } else if (lower_key == "enable_statistics" || lower_key == "stats") {
+        enable_statistics = (value == "true" || value == "1" || value == "yes");
+    } else if (lower_key == "stats_interval") {
+        try {
+            int seconds = std::stoi(value);
+            stats_interval = std::chrono::seconds(seconds);
+        } catch (const std::exception&) {
+            return false;
+        }
+    } else if (lower_key == "drift_file" || lower_key == "drift") {
+        drift_file = value;
+    } else if (lower_key == "enable_drift_compensation" || lower_key == "drift_comp") {
+        enable_drift_compensation = (value == "true" || value == "1" || value == "yes");
+    } else if (lower_key == "leap_second_file" || lower_key == "leap_seconds") {
+        leap_second_file = value;
+    } else if (lower_key == "enable_leap_second_handling" || lower_key == "leap_handling") {
+        enable_leap_second_handling = (value == "true" || value == "1" || value == "yes");
     }
     
-    return false;
-}
-
-bool NtpConfig::validate() const {
-    bool valid = true;
-    
-    if (listen_port < 1 || listen_port > 65535) {
-        Logger::getInstance().error("Invalid listen port: " + std::to_string(listen_port));
-        valid = false;
-    }
-    
-    if (static_cast<int>(stratum) < 1 || static_cast<int>(stratum) > 15) {
-        Logger::getInstance().error("Invalid stratum: " + std::to_string(static_cast<int>(stratum)));
-        valid = false;
-    }
-    
-    if (worker_threads < 1) {
-        Logger::getInstance().error("Invalid worker threads: " + std::to_string(worker_threads));
-        valid = false;
-    }
-    
-    return valid;
+    return true;
 }
 
 } // namespace simple_ntpd
+

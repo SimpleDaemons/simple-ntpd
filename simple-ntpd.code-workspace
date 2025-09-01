@@ -5,7 +5,6 @@
 			"path": "."
 		},
 		{
-			"name": "simple-tftpd",
 			"path": "../simple-tftpd"
 		}
 	],
