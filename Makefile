@@ -437,8 +437,10 @@ endif
 # Dependencies
 deps:
 ifeq ($(PLATFORM),macos)
+	@echo "Installing dependencies on macOS..."
 	sudo port install openssl jsoncpp cmake
 else ifeq ($(PLATFORM),linux)
+	@echo "Installing dependencies on Linux..."
 	sudo apt-get update
 	sudo apt-get install -y build-essential cmake libssl-dev libjsoncpp-dev
 	# For RPM-based systems
@@ -449,11 +451,97 @@ else ifeq ($(PLATFORM),windows)
 	@echo "This will install vcpkg and required dependencies"
 endif
 
+# Platform-specific dependency targets
+macos-deps:
+ifeq ($(PLATFORM),macos)
+	@echo "Installing macOS-specific dependencies..."
+	sudo port install openssl jsoncpp cmake pkgconfig
+	@echo "macOS dependencies installed successfully"
+else
+	@echo "This target is only available on macOS"
+endif
+
+linux-deps:
+ifeq ($(PLATFORM),linux)
+	@echo "Installing Linux-specific dependencies..."
+	@if command -v apt-get >/dev/null 2>&1; then \
+		echo "Detected Debian/Ubuntu system..."; \
+		sudo apt-get update; \
+		sudo apt-get install -y build-essential cmake libssl-dev libjsoncpp-dev pkg-config; \
+	elif command -v yum >/dev/null 2>&1; then \
+		echo "Detected Red Hat/CentOS system..."; \
+		sudo yum install -y gcc-c++ cmake openssl-devel jsoncpp-devel pkgconfig; \
+	elif command -v dnf >/dev/null 2>&1; then \
+		echo "Detected Fedora system..."; \
+		sudo dnf install -y gcc-c++ cmake openssl-devel jsoncpp-devel pkgconfig; \
+	elif command -v pacman >/dev/null 2>&1; then \
+		echo "Detected Arch Linux system..."; \
+		sudo pacman -S --needed base-devel cmake openssl jsoncpp pkgconf; \
+	else \
+		echo "Unsupported Linux distribution. Please install manually:"; \
+		echo "  - build-essential/gcc-c++"; \
+		echo "  - cmake"; \
+		echo "  - libssl-dev/openssl-devel"; \
+		echo "  - libjsoncpp-dev/jsoncpp-devel"; \
+		echo "  - pkg-config/pkgconfig"; \
+	fi
+	@echo "Linux dependencies installed successfully"
+else
+	@echo "This target is only available on Linux"
+endif
+
+windows-deps:
+ifeq ($(PLATFORM),windows)
+	@echo "Installing Windows dependencies..."
+	@if exist scripts\build-windows.bat ( \
+		scripts\build-windows.bat --deps; \
+	) else ( \
+		echo "Windows build script not found. Please install manually:"; \
+		echo "  - Visual Studio 2019 or later"; \
+		echo "  - CMake"; \
+		echo "  - vcpkg"; \
+		echo "  - OpenSSL"; \
+		echo "  - JsonCPP"; \
+	)
+else
+	@echo "This target is only available on Windows"
+endif
+
+# Runtime dependencies (for running the service)
+runtime-deps:
+ifeq ($(PLATFORM),macos)
+	@echo "Installing runtime dependencies on macOS..."
+	sudo port install openssl
+	@echo "Runtime dependencies installed successfully"
+else ifeq ($(PLATFORM),linux)
+	@echo "Installing runtime dependencies on Linux..."
+	@if command -v apt-get >/dev/null 2>&1; then \
+		sudo apt-get install -y libssl3 libjsoncpp25; \
+	elif command -v yum >/dev/null 2>&1; then \
+		sudo yum install -y openssl jsoncpp; \
+	elif command -v dnf >/dev/null 2>&1; then \
+		sudo dnf install -y openssl jsoncpp; \
+	elif command -v pacman >/dev/null 2>&1; then \
+		sudo pacman -S --needed openssl jsoncpp; \
+	else \
+		echo "Please install runtime dependencies manually: openssl, jsoncpp"; \
+	fi
+	@echo "Runtime dependencies installed successfully"
+else ifeq ($(PLATFORM),windows)
+	@echo "Runtime dependencies on Windows are included with the application"
+endif
+
 # Development dependencies
 dev-deps:
 ifeq ($(PLATFORM),macos)
 	@echo "Installing development tools on macOS..."
-	sudo port install clang-format cppcheck py3-bandit semgrep
+	@echo "Installing available packages from MacPorts..."
+	sudo port install cppcheck py3-bandit semgrep
+	@echo "Note: clang-format is not available in MacPorts."
+	@echo "To install clang-format, you can:"
+	@echo "  1. Use Homebrew: brew install clang-format"
+	@echo "  2. Install Xcode Command Line Tools: xcode-select --install"
+	@echo "  3. Install manually from LLVM releases"
 else ifeq ($(PLATFORM),linux)
 	@echo "Installing development tools on Linux..."
 	sudo apt-get update
@@ -465,15 +553,23 @@ else ifeq ($(PLATFORM),windows)
 	@echo "This will install clang-format, cppcheck, and other development tools"
 endif
 
-# Windows-specific targets
-windows-deps:
-ifeq ($(PLATFORM),windows)
-	@echo "Installing Windows dependencies..."
-	scripts\build-windows.bat --deps
+# Alternative development dependencies (using Homebrew on macOS)
+dev-deps-brew:
+ifeq ($(PLATFORM),macos)
+	@echo "Installing development tools on macOS using Homebrew..."
+	@if command -v brew >/dev/null 2>&1; then \
+		brew install clang-format cppcheck; \
+		pip3 install bandit semgrep; \
+		echo "Development tools installed successfully via Homebrew"; \
+	else \
+		echo "Homebrew not found. Please install Homebrew first:"; \
+		echo "  /bin/bash -c \"\$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""; \
+	fi
 else
-	@echo "This target is only available on Windows"
+	@echo "This target is only available on macOS"
 endif
 
+# Windows-specific targets
 windows-service: install
 ifeq ($(PLATFORM),windows)
 	@echo "Creating Windows service..."
@@ -496,40 +592,217 @@ docker-stop:
 # Service management
 service-install: install
 ifeq ($(PLATFORM),macos)
-	sudo cp $(DEPLOYMENT_DIR)/launchd/com.$(PROJECT_NAME).$(PROJECT_NAME).plist /Library/LaunchDaemons/
-	sudo launchctl load /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist
+	@echo "Installing service on macOS..."
+	@if [ -f $(DEPLOYMENT_DIR)/launchd/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo cp $(DEPLOYMENT_DIR)/launchd/com.$(PROJECT_NAME).$(PROJECT_NAME).plist /Library/LaunchDaemons/; \
+		sudo launchctl load /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
+		echo "Service installed and started successfully"; \
+	else \
+		echo "Service file not found at $(DEPLOYMENT_DIR)/launchd/com.$(PROJECT_NAME).$(PROJECT_NAME).plist"; \
+		echo "Please create the service file first"; \
+		exit 1; \
+	fi
 else ifeq ($(PLATFORM),linux)
-	sudo cp $(DEPLOYMENT_DIR)/systemd/$(PROJECT_NAME).service /etc/systemd/system/
-	sudo systemctl daemon-reload
-	sudo systemctl enable $(PROJECT_NAME)
-	sudo systemctl start $(PROJECT_NAME)
+	@echo "Installing service on Linux..."
+	@if [ -f $(DEPLOYMENT_DIR)/systemd/$(PROJECT_NAME).service ]; then \
+		sudo cp $(DEPLOYMENT_DIR)/systemd/$(PROJECT_NAME).service /etc/systemd/system/; \
+		sudo systemctl daemon-reload; \
+		sudo systemctl enable $(PROJECT_NAME); \
+		sudo systemctl start $(PROJECT_NAME); \
+		echo "Service installed and started successfully"; \
+	else \
+		echo "Service file not found at $(DEPLOYMENT_DIR)/systemd/$(PROJECT_NAME).service"; \
+		echo "Please create the service file first"; \
+		exit 1; \
+	fi
 else ifeq ($(PLATFORM),windows)
-	@echo "Windows service creation..."
-	scripts\build-windows.bat --service
+	@echo "Installing service on Windows..."
+	@if exist scripts\build-windows.bat ( \
+		scripts\build-windows.bat --service; \
+	) else ( \
+		echo "Windows build script not found. Please install service manually:"; \
+		echo "  sc create SimpleNTPDaemon binPath= \"$(INSTALL_PREFIX)\\bin\\$(PROJECT_NAME).exe\""; \
+		echo "  sc start SimpleNTPDaemon"; \
+	)
 endif
 
 service-uninstall:
 ifeq ($(PLATFORM),macos)
-	sudo launchctl unload /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist
-	sudo rm -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist
+	@echo "Uninstalling service on macOS..."
+	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo launchctl unload /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
+		sudo rm -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
+		echo "Service uninstalled successfully"; \
+	else \
+		echo "Service not found"; \
+	fi
 else ifeq ($(PLATFORM),linux)
-	sudo systemctl stop $(PROJECT_NAME)
-	sudo systemctl disable $(PROJECT_NAME)
-	sudo rm -f /etc/systemd/system/$(PROJECT_NAME).service
-	sudo systemctl daemon-reload
+	@echo "Uninstalling service on Linux..."
+	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
+		sudo systemctl stop $(PROJECT_NAME); \
+		sudo systemctl disable $(PROJECT_NAME); \
+		sudo rm -f /etc/systemd/system/$(PROJECT_NAME).service; \
+		sudo systemctl daemon-reload; \
+		echo "Service uninstalled successfully"; \
+	else \
+		echo "Service not found"; \
+	fi
 else ifeq ($(PLATFORM),windows)
-	@echo "Removing Windows service..."
-	sc delete SimpleNTPDaemon
+	@echo "Uninstalling service on Windows..."
+	@sc query SimpleNTPDaemon >nul 2>&1 && ( \
+		sc stop SimpleNTPDaemon; \
+		sc delete SimpleNTPDaemon; \
+		echo "Service uninstalled successfully"; \
+	) || echo "Service not found"
 endif
 
 service-status:
 ifeq ($(PLATFORM),macos)
-	launchctl list | grep $(PROJECT_NAME)
+	@echo "Checking service status on macOS..."
+	@if launchctl list | grep -q $(PROJECT_NAME); then \
+		echo "Service is running:"; \
+		launchctl list | grep $(PROJECT_NAME); \
+	else \
+		echo "Service is not running"; \
+	fi
 else ifeq ($(PLATFORM),linux)
-	sudo systemctl status $(PROJECT_NAME)
+	@echo "Checking service status on Linux..."
+	@if systemctl is-active --quiet $(PROJECT_NAME); then \
+		echo "Service is running:"; \
+		sudo systemctl status $(PROJECT_NAME) --no-pager -l; \
+	else \
+		echo "Service is not running"; \
+		@if systemctl is-enabled --quiet $(PROJECT_NAME); then \
+			echo "Service is enabled but not running"; \
+		else \
+			echo "Service is not enabled"; \
+		fi; \
+	fi
 else ifeq ($(PLATFORM),windows)
-	sc query SimpleNTPDaemon
+	@echo "Checking service status on Windows..."
+	@sc query SimpleNTPDaemon
 endif
+
+# Service control targets
+service-start:
+ifeq ($(PLATFORM),macos)
+	@echo "Starting service on macOS..."
+	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo launchctl start com.$(PROJECT_NAME).$(PROJECT_NAME); \
+		echo "Service started successfully"; \
+	else \
+		echo "Service not installed. Run 'make service-install' first"; \
+	fi
+else ifeq ($(PLATFORM),linux)
+	@echo "Starting service on Linux..."
+	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
+		sudo systemctl start $(PROJECT_NAME); \
+		echo "Service started successfully"; \
+	else \
+		echo "Service not installed. Run 'make service-install' first"; \
+	fi
+else ifeq ($(PLATFORM),windows)
+	@echo "Starting service on Windows..."
+	@sc start SimpleNTPDaemon
+endif
+
+service-stop:
+ifeq ($(PLATFORM),macos)
+	@echo "Stopping service on macOS..."
+	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo launchctl stop com.$(PROJECT_NAME).$(PROJECT_NAME); \
+		echo "Service stopped successfully"; \
+	else \
+		echo "Service not installed"; \
+	fi
+else ifeq ($(PLATFORM),linux)
+	@echo "Stopping service on Linux..."
+	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
+		sudo systemctl stop $(PROJECT_NAME); \
+		echo "Service stopped successfully"; \
+	else \
+		echo "Service not installed"; \
+	fi
+else ifeq ($(PLATFORM),windows)
+	@echo "Stopping service on Windows..."
+	@sc stop SimpleNTPDaemon
+endif
+
+service-restart:
+ifeq ($(PLATFORM),macos)
+	@echo "Restarting service on macOS..."
+	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo launchctl stop com.$(PROJECT_NAME).$(PROJECT_NAME); \
+		sleep 2; \
+		sudo launchctl start com.$(PROJECT_NAME).$(PROJECT_NAME); \
+		echo "Service restarted successfully"; \
+	else \
+		echo "Service not installed. Run 'make service-install' first"; \
+	fi
+else ifeq ($(PLATFORM),linux)
+	@echo "Restarting service on Linux..."
+	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
+		sudo systemctl restart $(PROJECT_NAME); \
+		echo "Service restarted successfully"; \
+	else \
+		echo "Service not installed. Run 'make service-install' first"; \
+	fi
+else ifeq ($(PLATFORM),windows)
+	@echo "Restarting service on Windows..."
+	@sc stop SimpleNTPDaemon
+	@timeout /t 2 /nobreak >nul
+	@sc start SimpleNTPDaemon
+endif
+
+service-enable:
+ifeq ($(PLATFORM),macos)
+	@echo "Enabling service on macOS..."
+	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo launchctl load -w /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
+		echo "Service enabled successfully"; \
+	else \
+		echo "Service not installed. Run 'make service-install' first"; \
+	fi
+else ifeq ($(PLATFORM),linux)
+	@echo "Enabling service on Linux..."
+	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
+		sudo systemctl enable $(PROJECT_NAME); \
+		echo "Service enabled successfully"; \
+	else \
+		echo "Service not installed. Run 'make service-install' first"; \
+	fi
+else ifeq ($(PLATFORM),windows)
+	@echo "Enabling service on Windows..."
+	@sc config SimpleNTPDaemon start= auto
+endif
+
+service-disable:
+ifeq ($(PLATFORM),macos)
+	@echo "Disabling service on macOS..."
+	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo launchctl unload /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
+		echo "Service disabled successfully"; \
+	else \
+		echo "Service not installed"; \
+	fi
+else ifeq ($(PLATFORM),linux)
+	@echo "Disabling service on Linux..."
+	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
+		sudo systemctl disable $(PROJECT_NAME); \
+		echo "Service disabled successfully"; \
+	else \
+		echo "Service not installed"; \
+	fi
+else ifeq ($(PLATFORM),windows)
+	@echo "Disabling service on Windows..."
+	@sc config SimpleNTPDaemon start= disabled
+endif
+
+# Legacy service targets for compatibility
+start: service-start
+stop: service-stop
+restart: service-restart
+status: service-status
 
 # Configuration management
 config-install: install
@@ -657,7 +930,8 @@ endif
 	@echo "  lint             - Run linting tools"
 	@echo "  security-scan    - Run security scanning tools"
 	@echo "  deps             - Install dependencies"
-	@echo "  dev-deps         - Install development tools (clang-format, cppcheck, etc.)"
+	@echo "  dev-deps         - Install development tools (MacPorts)"
+	@echo "  dev-deps-brew    - Install development tools (Homebrew)"
 	@echo "  windows-deps     - Install Windows dependencies"
 	@echo "  windows-service  - Create Windows service"
 	@echo "  docker-build     - Build Docker image"
@@ -715,7 +989,7 @@ endif
 
 # Phony targets
 .PHONY: all build clean install uninstall test package package-source package-rpm package-deb package-dmg package-pkg package-msi package-zip package-script package-all \
-        dev-build dev-test docs analyze coverage format check-style lint security-scan deps dev-deps windows-deps windows-service \
+        dev-build dev-test docs analyze coverage format check-style lint security-scan deps dev-deps dev-deps-brew windows-deps windows-service \
         docker-build docker-run docker-stop service-install service-uninstall service-status \
         config-install config-backup log-rotate backup restore distclean help debug release sanitize rebuild test-verbose
 
