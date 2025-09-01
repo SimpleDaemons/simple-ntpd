@@ -67,7 +67,7 @@ else ifeq ($(UNAME_S),Darwin)
     INSTALL_PREFIX = /usr/local
     CONFIG_DIR = $(INSTALL_PREFIX)/etc/$(PROJECT_NAME)
     # Unix file extensions
-    EXE_EXT = 
+    EXE_EXT =
     LIB_EXT = .dylib
     DLL_EXT = .dylib
     # Unix commands
@@ -86,7 +86,7 @@ else
     INSTALL_PREFIX = /usr/local
     CONFIG_DIR = /etc/$(PROJECT_NAME)
     # Unix file extensions
-    EXE_EXT = 
+    EXE_EXT =
     LIB_EXT = .so
     DLL_EXT = .so
     # Unix commands
@@ -294,7 +294,7 @@ endif
 	@echo "Source package created"
 
 # Package all formats
-package-all: 
+package-all:
 ifeq ($(PLATFORM),macos)
 	package-dmg package-pkg package-script
 else ifeq ($(PLATFORM),windows)
