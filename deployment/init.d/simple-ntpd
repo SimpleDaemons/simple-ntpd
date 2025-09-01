@@ -1,183 +1,131 @@
 #!/bin/bash
 #
-# Simple NTP Daemon init.d script
-# Copyright 2024 BLBurns <contact@blburns.com>
+# simple-ntpd    Simple NTP Daemon init script
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# chkconfig: 2345 20 80
+# description: Simple NTP Daemon provides NTP time synchronization
+# processname: simple-ntpd
+# pidfile: /var/run/simple-ntpd/simple-ntpd.pid
+# config: /etc/simple-ntpd/simple-ntpd.conf
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
+# Author: SimpleDaemons
+# License: Apache 2.0
 
 ### BEGIN INIT INFO
-# Provides:          simple-ntpd
-# Required-Start:    $network $remote_fs
-# Required-Stop:     $network $remote_fs
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Provides: simple-ntpd
+# Required-Start: $network $remote_fs $syslog
+# Required-Stop: $network $remote_fs $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
 # Short-Description: Simple NTP Daemon
-# Description:       A lightweight, cross-platform Network Time Protocol daemon
+# Description: Simple NTP Daemon provides NTP time synchronization
 ### END INIT INFO
 
-# Script configuration
-NAME="simple-ntpd"
-DAEMON="/usr/local/bin/simple-ntpd"
-DAEMON_ARGS="start"
-PIDFILE="/var/run/simple-ntpd.pid"
-LOCKFILE="/var/lock/subsys/simple-ntpd"
-CONFIGFILE="/etc/simple-ntpd/simple-ntpd.conf"
-USER="ntp"
-GROUP="ntp"
-
 # Source function library
-. /etc/init.d/functions
+. /etc/rc.d/init.d/functions
 
-# Check if daemon exists
-[ -x "$DAEMON" ] || exit 5
+# Source networking configuration
+. /etc/sysconfig/network
 
-# Check if config file exists
-[ -f "$CONFIGFILE" ] || exit 6
+# Check that networking is up
+[ "${NETWORKING}" = "no" ] && exit 6
 
-# Function to create required directories
-create_directories() {
+# NTP daemon configuration
+NTPD_NAME="simple-ntpd"
+NTPD_BIN="/usr/sbin/simple-ntpd"
+NTPD_CONF="/etc/simple-ntpd/simple-ntpd.conf"
+NTPD_PID="/var/run/simple-ntpd/simple-ntpd.pid"
+NTPD_LOCK="/var/lock/subsys/simple-ntpd"
+NTPD_LOG="/var/log/simple-ntpd/simple-ntpd.log"
+NTPD_USER="ntp"
+NTPD_GROUP="ntp"
+NTPD_ARGS="-c ${NTPD_CONF}"
+
+# Check if binary exists
+[ -x ${NTPD_BIN} ] || exit 5
+
+# Check if config exists
+[ -f ${NTPD_CONF} ] || exit 6
+
+# Create necessary directories
+create_dirs() {
+    mkdir -p /var/run/simple-ntpd
     mkdir -p /var/log/simple-ntpd
     mkdir -p /var/lib/simple-ntpd
-    mkdir -p /var/run/simple-ntpd
-    chown -R $USER:$GROUP /var/log/simple-ntpd
-    chown -R $USER:$GROUP /var/lib/simple-ntpd
-    chown -R $USER:$GROUP /var/run/simple-ntpd
+    chown ${NTPD_USER}:${NTPD_GROUP} /var/run/simple-ntpd
+    chown ${NTPD_USER}:${NTPD_GROUP} /var/log/simple-ntpd
+    chown ${NTPD_USER}:${NTPD_GROUP} /var/lib/simple-ntpd
+    chmod 755 /var/run/simple-ntpd
     chmod 755 /var/log/simple-ntpd
     chmod 755 /var/lib/simple-ntpd
-    chmod 755 /var/run/simple-ntpd
 }
 
-# Function to start the daemon
+# Start the daemon
 start() {
-    echo -n "Starting $NAME: "
+    echo -n "Starting ${NTPD_NAME}: "
     
-    # Create required directories
-    create_directories
+    # Create necessary directories
+    create_dirs
     
     # Check if already running
-    if [ -f "$PIDFILE" ]; then
-        PID=$(cat "$PIDFILE")
-        if kill -0 "$PID" 2>/dev/null; then
-            echo "already running (PID: $PID)"
-            return 0
+    if [ -f ${NTPD_PID} ]; then
+        if kill -0 $(cat ${NTPD_PID}) 2>/dev/null; then
+            echo "already running"
+            return 1
         else
-            rm -f "$PIDFILE"
+            rm -f ${NTPD_PID}
         fi
     fi
     
     # Start the daemon
-    daemon --user "$USER" --pidfile "$PIDFILE" "$DAEMON" $DAEMON_ARGS
+    daemon --user ${NTPD_USER} --pidfile ${NTPD_PID} ${NTPD_BIN} ${NTPD_ARGS}
     RETVAL=$?
     
     if [ $RETVAL -eq 0 ]; then
-        echo "done"
-        touch "$LOCKFILE"
+        echo "OK"
+        touch ${NTPD_LOCK}
     else
-        echo "failed"
+        echo "FAILED"
     fi
     
     return $RETVAL
 }
 
-# Function to stop the daemon
+# Stop the daemon
 stop() {
-    echo -n "Stopping $NAME: "
+    echo -n "Stopping ${NTPD_NAME}: "
     
-    if [ -f "$PIDFILE" ]; then
-        PID=$(cat "$PIDFILE")
-        if kill -0 "$PID" 2>/dev/null; then
-            kill -TERM "$PID"
-            sleep 2
-            
-            # Check if still running
-            if kill -0 "$PID" 2>/dev/null; then
-                echo "force killing"
-                kill -KILL "$PID"
-                sleep 1
-            fi
-            
-            if ! kill -0 "$PID" 2>/dev/null; then
-                echo "done"
-                rm -f "$PIDFILE"
-                rm -f "$LOCKFILE"
-                return 0
-            else
-                echo "failed"
-                return 1
-            fi
+    if [ -f ${NTPD_PID} ]; then
+        killproc -p ${NTPD_PID} ${NTPD_BIN}
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ]; then
+            rm -f ${NTPD_PID}
+            rm -f ${NTPD_LOCK}
+            echo "OK"
         else
-            echo "not running"
-            rm -f "$PIDFILE"
-            rm -f "$LOCKFILE"
-            return 0
+            echo "FAILED"
         fi
     else
         echo "not running"
-        return 0
+        RETVAL=0
     fi
+    
+    return $RETVAL
 }
 
-# Function to restart the daemon
+# Restart the daemon
 restart() {
     stop
-    sleep 1
+    sleep 2
     start
 }
 
-# Function to reload configuration
+# Reload configuration
 reload() {
-    echo -n "Reloading $NAME configuration: "
+    echo -n "Reloading ${NTPD_NAME}: "
     
-    if [ -f "$PIDFILE" ]; then
-        PID=$(cat "$PIDFILE")
-        if kill -0 "$PID" 2>/dev/null; then
-            kill -HUP "$PID"
-            echo "done"
-            return 0
-        else
-            echo "not running"
-            return 1
-        fi
-    else
-        echo "not running"
-        return 1
-    fi
-}
-
-# Function to check status
-status() {
-    if [ -f "$PIDFILE" ]; then
-        PID=$(cat "$PIDFILE")
-        if kill -0 "$PID" 2>/dev/null; then
-            echo "$NAME is running (PID: $PID)"
-            return 0
-        else
-            echo "$NAME is not running (stale PID file)"
-            return 1
-        fi
-    else
-        echo "$NAME is not running"
-        return 3
-    fi
-}
-
-# Function to check configuration
-configtest() {
-    echo -n "Testing $NAME configuration: "
-    
-    if [ -f "$CONFIGFILE" ]; then
-        if "$DAEMON" --test-config --config "$CONFIGFILE" >/dev/null 2>&1; then
+    if [ -f ${NTPD_PID} ]; then
+        if kill -HUP $(cat ${NTPD_PID}) 2>/dev/null; then
             echo "OK"
             return 0
         else
@@ -185,49 +133,80 @@ configtest() {
             return 1
         fi
     else
-        echo "FAILED (config file not found)"
+        echo "not running"
         return 1
     fi
+}
+
+# Check status
+status() {
+    if [ -f ${NTPD_PID} ]; then
+        if kill -0 $(cat ${NTPD_PID}) 2>/dev/null; then
+            echo "${NTPD_NAME} is running (pid: $(cat ${NTPD_PID}))"
+            return 0
+        else
+            echo "${NTPD_NAME} is not running (stale pid file)"
+            return 1
+        fi
+    else
+        echo "${NTPD_NAME} is not running"
+        return 3
+    fi
+}
+
+# Check configuration
+configtest() {
+    echo -n "Testing ${NTPD_NAME} configuration: "
+    
+    if [ -f ${NTPD_CONF} ]; then
+        if ${NTPD_BIN} -t -c ${NTPD_CONF} >/dev/null 2>&1; then
+            echo "OK"
+            return 0
+        else
+            echo "FAILED"
+            return 1
+        fi
+    else
+        echo "configuration file not found"
+        return 1
+    fi
+}
+
+# Show usage
+usage() {
+    echo "Usage: $0 {start|stop|restart|reload|status|configtest}"
+    echo "  start       - Start the NTP daemon"
+    echo "  stop        - Stop the NTP daemon"
+    echo "  restart     - Restart the NTP daemon"
+    echo "  reload      - Reload configuration"
+    echo "  status      - Show daemon status"
+    echo "  configtest  - Test configuration file"
+    exit 1
 }
 
 # Main script logic
 case "$1" in
     start)
         start
-        RETVAL=$?
         ;;
     stop)
         stop
-        RETVAL=$?
         ;;
     restart)
         restart
-        RETVAL=$?
         ;;
     reload)
         reload
-        RETVAL=$?
         ;;
     status)
         status
-        RETVAL=$?
         ;;
     configtest)
         configtest
-        RETVAL=$?
         ;;
     *)
-        echo "Usage: $0 {start|stop|restart|reload|status|configtest}"
-        echo ""
-        echo "Commands:"
-        echo "  start       - Start the daemon"
-        echo "  stop        - Stop the daemon"
-        echo "  restart     - Restart the daemon"
-        echo "  reload      - Reload configuration"
-        echo "  status      - Show daemon status"
-        echo "  configtest  - Test configuration file"
-        exit 2
+        usage
         ;;
 esac
 
-exit $RETVAL
+exit $?
