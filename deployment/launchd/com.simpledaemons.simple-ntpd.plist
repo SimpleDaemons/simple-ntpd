@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.simpledaemons.simple-ntpd</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/sbin/simple-ntpd</string>
+        <string>-c</string>
+        <string>/usr/local/etc/simple-ntpd/simple-ntpd.conf</string>
+    </array>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <dict>
+        <key>NetworkState</key>
+        <true/>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+    
+    <key>WorkingDirectory</key>
+    <string>/usr/local/var/lib/simple-ntpd</string>
+    
+    <key>StandardOutPath</key>
+    <string>/usr/local/var/log/simple-ntpd/simple-ntpd.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/usr/local/var/log/simple-ntpd/simple-ntpd.error.log</string>
+    
+    <key>UserName</key>
+    <string>_ntp</string>
+    
+    <key>GroupName</key>
+    <string>_ntp</string>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    
+    <key>ExitTimeOut</key>
+    <integer>30</integer>
+    
+    <key>LimitLoadToHosts</key>
+    <array>
+        <string>localhost</string>
+    </array>
+    
+    <key>LimitLoadFromHosts</key>
+    <array>
+        <string>localhost</string>
+    </array>
+    
+    <key>LimitLoadToSessionType</key>
+    <array>
+        <string>System</string>
+    </array>
+    
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+        <key>NumberOfProcesses</key>
+        <integer>4096</integer>
+    </dict>
+    
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>32768</integer>
+        <key>NumberOfProcesses</key>
+        <integer>2048</integer>
+    </dict>
+    
+    <key>MachServices</key>
+    <dict>
+        <key>com.simpledaemons.simple-ntpd</key>
+        <true/>
+    </dict>
+    
+    <key>NetworkSecurity</key>
+    <dict>
+        <key>AllowIncomingConnections</key>
+        <true/>
+        <key>AllowOutgoingConnections</key>
+        <true/>
+    </dict>
+    
+    <key>AssociatedBundleIdentifiers</key>
+    <array>
+        <string>com.simpledaemons.simple-ntpd</string>
+    </array>
+    
+    <key>LaunchOnlyOnce</key>
+    <false/>
+    
+    <key>Disabled</key>
+    <false/>
+    
+    <key>EnableGlobbing</key>
+    <false/>
+    
+    <key>EnableTransactions</key>
+    <true/>
+    
+    <key>AbandonProcessGroup</key>
+    <true/>
+    
+    <key>LowPriorityIO</key>
+    <false/>
+    
+    <key>LowPriorityBackgroundIO</key>
+    <false/>
+    
+    <key>Nice</key>
+    <integer>0</integer>
+    
+    <key>TimeOut</key>
+    <integer>30</integer>
+    
+    <key>WatchPaths</key>
+    <array>
+        <string>/usr/local/etc/simple-ntpd</string>
+    </array>
+    
+    <key>QueueDirectories</key>
+    <array>
+        <string>/usr/local/var/spool/simple-ntpd</string>
+    </array>
+    
+    <key>StartInterval</key>
+    <integer>0</integer>
+    
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+    
+    <key>StartOnMount</key>
+    <false/>
+    
+    <key>StartOnNetwork</key>
+    <true/>
+    
+    <key>StartOnDemand</key>
+    <true/>
+    
+    <key>StderrPath</key>
+    <string>/usr/local/var/log/simple-ntpd/simple-ntpd.stderr.log</string>
+    
+    <key>StdoutPath</key>
+    <string>/usr/local/var/log/simple-ntpd/simple-ntpd.stdout.log</string>
+    
+    <key>Umask</key>
+    <integer>22</integer>
+    
+    <key>WaitForDebugger</key>
+    <false/>
+    
+    <key>Debug</key>
+    <false/>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>NTPD_CONFIG</key>
+        <string>/usr/local/etc/simple-ntpd/simple-ntpd.conf</string>
+        <key>NTPD_LOG_DIR</key>
+        <string>/usr/local/var/log/simple-ntpd</string>
+        <key>NTPD_DATA_DIR</key>
+        <string>/usr/local/var/lib/simple-ntpd</string>
+    </dict>
+</dict>
+</plist>
