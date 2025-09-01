@@ -95,7 +95,7 @@ If you can't find what you're looking for in the documentation:
 
 ## 🔗 External Resources
 
-- **[GitHub Repository](https://github.com/blburns/simple-ntpd)** - Source code and issues
+- **[GitHub Repository](https://github.com/SimpleDaemons/simple-ntpd)** - Source code and issues
 - **[NTP Protocol RFC 5905](https://tools.ietf.org/html/rfc5905)** - Official NTP specification
 - **[NTP Pool Project](https://www.pool.ntp.org/)** - Public NTP server pool
 - **[NTP Security](https://www.eecis.udel.edu/~mills/ntp/html/)** - NTP security information
