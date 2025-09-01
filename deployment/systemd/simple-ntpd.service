@@ -6,49 +6,45 @@ Wants=network.target
 
 [Service]
 Type=notify
-ExecStart=/usr/local/bin/simple-ntpd start
+ExecStart=/usr/sbin/simple-ntpd -c /etc/simple-ntpd/simple-ntpd.conf
 ExecReload=/bin/kill -HUP $MAINPID
-ExecStop=/bin/kill -TERM $MAINPID
-KillMode=mixed
-KillSignal=SIGTERM
-TimeoutStopSec=30
-Restart=on-failure
-RestartSec=5
+Restart=always
+RestartSec=3
 User=ntp
 Group=ntp
 RuntimeDirectory=simple-ntpd
 RuntimeDirectoryMode=0755
 StateDirectory=simple-ntpd
 StateDirectoryMode=0755
-LogsDirectory=simple-ntpd
-LogsDirectoryMode=0755
-ConfigurationDirectory=simple-ntpd
-ConfigurationDirectoryMode=0755
-
-# Security settings
+LogDirectory=simple-ntpd
+LogDirectoryMode=0755
+PIDFile=/run/simple-ntpd/simple-ntpd.pid
+LimitNOFILE=65536
+LimitNPROC=4096
 NoNewPrivileges=true
-PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
+ReadWritePaths=/var/lib/simple-ntpd /var/log/simple-ntpd
+PrivateTmp=true
+PrivateDevices=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
 RestrictRealtime=true
 RestrictSUIDSGID=true
-LockPersonality=true
 MemoryDenyWriteExecute=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
 SystemCallArchitectures=native
-SystemCallFilter=@system-service
+SystemCallFilter=@system-service @clock @network-io @basic-io @chown @setuid @memlock @keyring @timer @cpu-emulation @debug @obsolete @privileged @resources
 SystemCallErrorNumber=EPERM
-
-# Network settings
-BindPaths=/etc/simple-ntpd:/etc/simple-ntpd:ro
-BindReadOnlyPaths=/etc/localtime:/etc/localtime:ro
-BindReadOnlyPaths=/etc/timezone:/etc/timezone:ro
-
-# Capabilities
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+IPAddressDeny=
+IPAddressAllow=localhost
+IPAddressAllow=127.0.0.1
+IPAddressAllow=::1
+IPAddressAllow=0.0.0.0/0
+IPAddressAllow=::/0
 
 [Install]
 WantedBy=multi-user.target

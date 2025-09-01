@@ -2,7 +2,10 @@
 Description=Simple NTP Daemon Target
 Documentation=man:simple-ntpd(8)
 Requires=simple-ntpd.service
-After=simple-ntpd.service
+Wants=simple-ntpd.socket
+After=simple-ntpd.service simple-ntpd.socket
+AllowIsolate=true
 
 [Install]
 WantedBy=multi-user.target
+Also=time-sync.target

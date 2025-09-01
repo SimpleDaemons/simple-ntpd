@@ -8,15 +8,18 @@ Before=simple-ntpd.service
 ListenDatagram=0.0.0.0:123
 ListenDatagram=[::]:123
 BindIPv6Only=both
+Backlog=128
+MaxConnections=1000
+ReceiveBuffer=65536
+SendBuffer=65536
+PassCredentials=false
+PassSecurity=false
 SocketUser=ntp
 SocketGroup=ntp
 SocketMode=0644
-Backlog=128
-MaxConnections=1000
-KeepAlive=true
-KeepAliveTimeSec=300
-KeepAliveIntervalSec=75
-KeepAliveProbes=9
+ReusePort=true
+FreeBind=true
+BindToDevice=
 
 [Install]
 WantedBy=sockets.target
