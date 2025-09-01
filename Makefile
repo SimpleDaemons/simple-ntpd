@@ -1,7 +1,16 @@
 # Simple NTP Daemon Makefile
 # Provides convenient build targets and deployment options
 # Copyright 2024 SimpleDaemons
-# Licensed under the Apache License, Version 2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # Project configuration
 PROJECT_NAME = simple-ntpd
@@ -27,39 +36,32 @@ UNAME_M := $(shell uname -m)
 .PHONY: all
 all: build
 
-# Create build directory
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
 
-# Configure with CMake
-.PHONY: configure
-configure: $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) ..
+# Create build directory
+$(BUILD_DIR)-dir:
+	mkdir -p $(BUILD_DIR)
 
 # Build the project
 .PHONY: build
-build: configure
+build: $(BUILD_DIR)-dir
+	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) ..
 	$(MAKE) -C $(BUILD_DIR)
 
 # Build with debug information
 .PHONY: debug
-debug: $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
+debug: $(BUILD_DIR)-dir
 	cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DENABLE_LOGGING=ON -DENABLE_IPV6=ON ..
 	$(MAKE) -C $(BUILD_DIR)
 
 # Build with optimization
 .PHONY: release
-release: $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
+release: $(BUILD_DIR)-dir
 	cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DENABLE_LOGGING=ON -DENABLE_IPV6=ON ..
 	$(MAKE) -C $(BUILD_DIR)
 
 # Build with sanitizers
 .PHONY: sanitize
-sanitize: $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
+sanitize: $(BUILD_DIR)-dir
 	cd $(BUILD_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DBUILD_EXAMPLES=OFF -DENABLE_LOGGING=ON -DENABLE_IPV6=ON -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" ..
 	$(MAKE) -C $(BUILD_DIR)
 
@@ -113,21 +115,18 @@ package-source: build
 	cd $(BUILD_DIR) && $(MAKE) package_source
 
 # Build for specific platform
-.PHONY: build-macos
-build-macos: $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
+.PHONY: macos
+macos: $(BUILD_DIR)-dir
 	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" ..
 	$(MAKE) -C $(BUILD_DIR)
 
-.PHONY: build-linux
-build-linux: $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
+.PHONY: linux
+linux: $(BUILD_DIR)-dir
 	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) ..
 	$(MAKE) -C $(BUILD_DIR)
 
-.PHONY: build-windows
-build-windows: $(BUILD_DIR)
-	@mkdir -p $(BUILD_DIR)
+.PHONY: windows
+windows: $(BUILD_DIR)-dir
 	cd $(BUILD_DIR) && cmake $(CMAKE_OPTS) ..
 	$(MAKE) -C $(BUILD_DIR)
 
@@ -198,8 +197,8 @@ status:
 	sudo systemctl status simple-ntpd
 
 # Docker targets
-.PHONY: docker-build
-docker-build:
+.PHONY: docker-image
+docker-image:
 	docker build -t $(PROJECT_NAME):$(VERSION) .
 
 .PHONY: docker-run
@@ -243,15 +242,15 @@ help:
 	@echo "  stop             - Stop the service"
 	@echo "  restart          - Restart the service"
 	@echo "  status           - Show service status"
-	@echo "  docker-build     - Build Docker image"
+	@echo "  docker-image     - Build Docker image"
 	@echo "  docker-run       - Run Docker container"
 	@echo "  docker-stop      - Stop Docker container"
 	@echo "  help             - Show this help message"
 	@echo ""
 	@echo "Platform-specific targets:"
-	@echo "  build-macos      - Build for macOS"
-	@echo "  build-linux      - Build for Linux"
-	@echo "  build-windows    - Build for Windows"
+	@echo "  macos            - Build for macOS"
+	@echo "  linux            - Build for Linux"
+	@echo "  windows          - Build for Windows"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make debug       - Build with debug information"
