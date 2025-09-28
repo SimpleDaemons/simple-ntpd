@@ -1,59 +1,17 @@
 [Unit]
-Description=Simple NTP Daemon
-Documentation=man:simple-ntpd(8)
+Description=Simple NTP Daemon - A lightweight and secure NTP server
 After=network.target
-Wants=network.target
 
 [Service]
-Type=notify
-ExecStart=/usr/sbin/simple-ntpd -c /etc/simple-ntpd/simple-ntpd.conf
-ExecReload=/bin/kill -HUP $MAINPID
+Type=simple
+User=simple-ntpd
+Group=simple-ntpd
+ExecStart=/usr/local/bin/simple-ntpd
 Restart=always
-RestartSec=3
-User=ntp
-Group=ntp
-RuntimeDirectory=simple-ntpd
-RuntimeDirectoryMode=0755
-StateDirectory=simple-ntpd
-StateDirectoryMode=0755
-LogDirectory=simple-ntpd
-LogDirectoryMode=0755
-PIDFile=/run/simple-ntpd/simple-ntpd.pid
-LimitNOFILE=65536
-LimitNPROC=4096
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/var/lib/simple-ntpd /var/log/simple-ntpd
-PrivateTmp=true
-PrivateDevices=true
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-RestrictRealtime=true
-RestrictSUIDSGID=true
-MemoryDenyWriteExecute=true
-LockPersonality=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-RestrictNamespaces=true
-SystemCallArchitectures=native
-SystemCallFilter=@system-service @clock @network-io @basic-io @chown @setuid @memlock @keyring @timer @cpu-emulation @debug @obsolete @privileged @resources
-SystemCallErrorNumber=EPERM
-IPAddressDeny=
-IPAddressAllow=localhost
-IPAddressAllow=127.0.0.1
-IPAddressAllow=::1
-IPAddressAllow=0.0.0.0/0
-IPAddressAllow=::/0
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=simple-ntpd
 
 [Install]
 WantedBy=multi-user.target
-Also=simple-ntpd.socket
-
-# Socket activation
-[Socket]
-ListenDatagram=123
-BindIPv6Only=both
-SocketUser=ntp
-SocketGroup=ntp
-SocketMode=0644

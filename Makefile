@@ -195,114 +195,6 @@ else
 	@echo "Package generation not supported on this platform"
 endif
 
-# Package RPM (Linux only)
-package-rpm: build
-ifeq ($(PLATFORM),linux)
-	@echo "Building RPM package..."
-	@mkdir -p $(DIST_DIR)
-	cd $(BUILD_DIR) && cpack -G RPM
-	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.rpm $(DIST_DIR)/
-else
-	@echo "RPM packages are only supported on Linux"
-endif
-
-# Package DEB (Linux only)
-package-deb: build
-ifeq ($(PLATFORM),linux)
-	@echo "Building DEB package..."
-	@mkdir -p $(DIST_DIR)
-	cd $(BUILD_DIR) && cpack -G DEB
-	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.deb $(DIST_DIR)/
-else
-	@echo "DEB packages are only supported on Linux"
-endif
-
-# Package DMG (macOS only)
-package-dmg: build
-ifeq ($(PLATFORM),macos)
-	@echo "Building DMG package..."
-	@mkdir -p $(DIST_DIR)
-	cd $(BUILD_DIR) && cpack -G DragNDrop
-	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.dmg $(DIST_DIR)/
-else
-	@echo "DMG packages are only supported on macOS"
-endif
-
-# Package PKG (macOS only)
-package-pkg: build
-ifeq ($(PLATFORM),macos)
-	@echo "Building PKG package..."
-	@mkdir -p $(DIST_DIR)
-	cd $(BUILD_DIR) && cpack -G productbuild
-	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.pkg $(DIST_DIR)/
-else
-	@echo "PKG packages are only supported on macOS"
-endif
-
-# Package MSI (Windows only)
-package-msi: build
-ifeq ($(PLATFORM),windows)
-	@echo "Building MSI package..."
-	@$(MKDIR) $(DIST_DIR)
-	cd $(BUILD_DIR) && cpack -G WIX
-	$(CP) $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.msi $(DIST_DIR)/
-else
-	@echo "MSI packages are only supported on Windows"
-endif
-
-# Package ZIP (Windows only)
-package-zip: build
-ifeq ($(PLATFORM),windows)
-	@echo "Building ZIP package..."
-	@$(MKDIR) $(DIST_DIR)
-	cd $(BUILD_DIR) && cpack -G ZIP
-	$(CP) $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.zip $(DIST_DIR)/
-else
-	@echo "ZIP packages are only supported on Windows"
-endif
-
-# Package using build scripts (recommended)
-package-script:
-ifeq ($(PLATFORM),macos)
-	@echo "Building macOS package with build script..."
-	./scripts/build-macos.sh --package
-else ifeq ($(PLATFORM),linux)
-	@echo "Building Linux package with build script..."
-	./scripts/build-linux.sh --package
-else ifeq ($(PLATFORM),windows)
-	@echo "Building Windows package with build script..."
-	scripts\build-windows.bat --package
-else
-	@echo "Package generation not supported on this platform"
-endif
-
-# Package source code
-package-source: build
-	@echo "Creating source package..."
-	@mkdir -p $(DIST_DIR)
-ifeq ($(PLATFORM),windows)
-	powershell -Command "Compress-Archive -Path '$(SRC_DIR)', '$(INCLUDE_DIR)', 'CMakeLists.txt', 'Makefile', 'README.md', 'LICENSE' -DestinationPath '$(DIST_DIR)\$(PROJECT_NAME)-$(VERSION)-src.zip' -Force"
-else
-	tar -czf $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-src.tar.gz \
-		$(SRC_DIR) \
-		$(INCLUDE_DIR) \
-		CMakeLists.txt \
-		Makefile \
-		README.md \
-		LICENSE
-endif
-	@echo "Source package created"
-
-# Package all formats
-package-all:
-ifeq ($(PLATFORM),macos)
-	package-dmg package-pkg package-script
-else ifeq ($(PLATFORM),windows)
-	package-msi package-zip package-script
-else
-	package-rpm package-deb package-script
-endif
-
 # Development targets
 dev-build: $(BUILD_DIR)-dir
 ifeq ($(PLATFORM),windows)
@@ -318,36 +210,84 @@ else
 	cd $(BUILD_DIR) && make test
 endif
 
-# Documentation
-docs: build
+# Static binary targets
+static-build: $(BUILD_DIR)-dir
+	@echo "Building static binary..."
 ifeq ($(PLATFORM),windows)
-	cd $(BUILD_DIR) && cmake --build . --target docs
+	cd $(BUILD_DIR) && cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC_LINKING=ON && cmake --build . --config Release
 else
-	cd $(BUILD_DIR) && make docs
+	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC_LINKING=ON && make -j$(PARALLEL_JOBS)
 endif
 
-# Static analysis
-analyze: $(BUILD_DIR)-dir
+static-test: static-build
 ifeq ($(PLATFORM),windows)
-	cd $(BUILD_DIR) && cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Debug -DENABLE_ANALYZE=ON && cmake --build . --config Debug
-else
-	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_ANALYZE=ON && make -j$(PARALLEL_JOBS)
-endif
-
-# Coverage
-coverage: $(BUILD_DIR)-dir
-ifeq ($(PLATFORM),windows)
-	@echo "Coverage reporting not yet implemented for Windows"
-	cd $(BUILD_DIR) && cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON && cmake --build . --config Debug
 	cd $(BUILD_DIR) && ctest --output-on-failure
 else
-	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON && make -j$(PARALLEL_JOBS)
 	cd $(BUILD_DIR) && make test
-	cd $(BUILD_DIR) && lcov --capture --directory . --output-file coverage.info
-	cd $(BUILD_DIR) && genhtml coverage.info --output-directory coverage_report
 endif
 
-# Format code
+# Create static binary package
+static-package: static-build
+	@echo "Creating static binary package..."
+	@mkdir -p $(DIST_DIR)
+ifeq ($(PLATFORM),windows)
+	@echo "Creating Windows static binary ZIP..."
+	@mkdir -p $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-windows
+	@cp $(BUILD_DIR)/$(PROJECT_NAME).exe $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-windows/
+	@cp README.md $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-windows/
+	@cp LICENSE $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-windows/
+	@cp -r config $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-windows/
+	@cd $(DIST_DIR) && powershell -Command "Compress-Archive -Path '$(PROJECT_NAME)-$(VERSION)-static-windows' -DestinationPath '$(PROJECT_NAME)-$(VERSION)-static-windows.zip' -Force"
+	@rm -rf $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-windows
+	@echo "Windows static binary package created: $(PROJECT_NAME)-$(VERSION)-static-windows.zip"
+else ifeq ($(PLATFORM),macos)
+	@echo "Creating macOS static binary TAR.GZ..."
+	@mkdir -p $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-macos
+	@cp $(BUILD_DIR)/$(PROJECT_NAME) $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-macos/
+	@cp README.md $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-macos/
+	@cp LICENSE $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-macos/
+	@cp -r config $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-macos/
+	@cd $(DIST_DIR) && tar -czf $(PROJECT_NAME)-$(VERSION)-static-macos.tar.gz $(PROJECT_NAME)-$(VERSION)-static-macos/
+	@rm -rf $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-macos
+	@echo "macOS static binary package created: $(PROJECT_NAME)-$(VERSION)-static-macos.tar.gz"
+else ifeq ($(PLATFORM),linux)
+	@echo "Creating Linux static binary TAR.GZ..."
+	@mkdir -p $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-linux
+	@cp $(BUILD_DIR)/$(PROJECT_NAME) $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-linux/
+	@cp README.md $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-linux/
+	@cp LICENSE $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-linux/
+	@cp -r config $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-linux/
+	@cd $(DIST_DIR) && tar -czf $(PROJECT_NAME)-$(VERSION)-static-linux.tar.gz $(PROJECT_NAME)-$(VERSION)-static-linux/
+	@rm -rf $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-linux
+	@echo "Linux static binary package created: $(PROJECT_NAME)-$(VERSION)-static-linux.tar.gz"
+else
+	@echo "Static binary package generation not supported on this platform"
+endif
+
+# Create static binary ZIP (cross-platform)
+static-zip: static-build
+	@echo "Creating static binary ZIP package..."
+	@mkdir -p $(DIST_DIR)
+	@mkdir -p $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)
+	@cp $(BUILD_DIR)/$(PROJECT_NAME)$(if $(filter windows,$(PLATFORM)),.exe,) $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)/
+	@cp README.md $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)/
+	@cp LICENSE $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)/
+	@cp -r config $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)/
+ifeq ($(PLATFORM),windows)
+	@cd $(DIST_DIR) && powershell -Command "Compress-Archive -Path '$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)' -DestinationPath '$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM).zip' -Force"
+else
+	@cd $(DIST_DIR) && zip -r $(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM).zip $(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)/
+endif
+	@rm -rf $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM)
+	@echo "Static binary ZIP package created: $(PROJECT_NAME)-$(VERSION)-static-$(PLATFORM).zip"
+
+# Create all static binary formats
+static-all: static-package static-zip
+	@echo "All static binary packages created successfully"
+	@echo "Static binary packages:"
+	@ls -la $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-static-* 2>/dev/null || echo "No static binary packages found"
+
+# Code formatting
 format:
 ifeq ($(PLATFORM),windows)
 	@echo "Code formatting on Windows requires clang-format to be installed"
@@ -456,86 +396,6 @@ else ifeq ($(PLATFORM),windows)
 	@echo "This will install vcpkg and required dependencies"
 endif
 
-# Platform-specific dependency targets
-macos-deps:
-ifeq ($(PLATFORM),macos)
-	@echo "Installing macOS-specific dependencies..."
-	sudo port install openssl jsoncpp cmake pkgconfig
-	@echo "macOS dependencies installed successfully"
-else
-	@echo "This target is only available on macOS"
-endif
-
-linux-deps:
-ifeq ($(PLATFORM),linux)
-	@echo "Installing Linux-specific dependencies..."
-	@if command -v apt-get >/dev/null 2>&1; then \
-		echo "Detected Debian/Ubuntu system..."; \
-		sudo apt-get update; \
-		sudo apt-get install -y build-essential cmake libssl-dev libjsoncpp-dev pkg-config; \
-	elif command -v yum >/dev/null 2>&1; then \
-		echo "Detected Red Hat/CentOS system..."; \
-		sudo yum install -y gcc-c++ cmake openssl-devel jsoncpp-devel pkgconfig; \
-	elif command -v dnf >/dev/null 2>&1; then \
-		echo "Detected Fedora system..."; \
-		sudo dnf install -y gcc-c++ cmake openssl-devel jsoncpp-devel pkgconfig; \
-	elif command -v pacman >/dev/null 2>&1; then \
-		echo "Detected Arch Linux system..."; \
-		sudo pacman -S --needed base-devel cmake openssl jsoncpp pkgconf; \
-	else \
-		echo "Unsupported Linux distribution. Please install manually:"; \
-		echo "  - build-essential/gcc-c++"; \
-		echo "  - cmake"; \
-		echo "  - libssl-dev/openssl-devel"; \
-		echo "  - libjsoncpp-dev/jsoncpp-devel"; \
-		echo "  - pkg-config/pkgconfig"; \
-	fi
-	@echo "Linux dependencies installed successfully"
-else
-	@echo "This target is only available on Linux"
-endif
-
-windows-deps:
-ifeq ($(PLATFORM),windows)
-	@echo "Installing Windows dependencies..."
-	@if exist scripts\build-windows.bat ( \
-		scripts\build-windows.bat --deps; \
-	) else ( \
-		echo "Windows build script not found. Please install manually:"; \
-		echo "  - Visual Studio 2019 or later"; \
-		echo "  - CMake"; \
-		echo "  - vcpkg"; \
-		echo "  - OpenSSL"; \
-		echo "  - JsonCPP"; \
-	)
-else
-	@echo "This target is only available on Windows"
-endif
-
-# Runtime dependencies (for running the service)
-runtime-deps:
-ifeq ($(PLATFORM),macos)
-	@echo "Installing runtime dependencies on macOS..."
-	sudo port install openssl
-	@echo "Runtime dependencies installed successfully"
-else ifeq ($(PLATFORM),linux)
-	@echo "Installing runtime dependencies on Linux..."
-	@if command -v apt-get >/dev/null 2>&1; then \
-		sudo apt-get install -y libssl3 libjsoncpp25; \
-	elif command -v yum >/dev/null 2>&1; then \
-		sudo yum install -y openssl jsoncpp; \
-	elif command -v dnf >/dev/null 2>&1; then \
-		sudo dnf install -y openssl jsoncpp; \
-	elif command -v pacman >/dev/null 2>&1; then \
-		sudo pacman -S --needed openssl jsoncpp; \
-	else \
-		echo "Please install runtime dependencies manually: openssl, jsoncpp"; \
-	fi
-	@echo "Runtime dependencies installed successfully"
-else ifeq ($(PLATFORM),windows)
-	@echo "Runtime dependencies on Windows are included with the application"
-endif
-
 # Development dependencies
 dev-deps:
 ifeq ($(PLATFORM),macos)
@@ -560,37 +420,12 @@ else ifeq ($(PLATFORM),windows)
 	@echo "This will install clang-format, cppcheck, and other development tools"
 endif
 
-# Alternative development dependencies (using Homebrew on macOS)
-dev-deps-brew:
-ifeq ($(PLATFORM),macos)
-	@echo "Installing development tools on macOS using Homebrew..."
-	@if command -v brew >/dev/null 2>&1; then \
-		brew install clang-format cppcheck; \
-		pip3 install bandit semgrep; \
-		echo "Development tools installed successfully via Homebrew"; \
-	else \
-		echo "Homebrew not found. Please install Homebrew first:"; \
-		echo "  /bin/bash -c \"\$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""; \
-	fi
-else
-	@echo "This target is only available on macOS"
-endif
-
-# Windows-specific targets
-windows-service: install
-ifeq ($(PLATFORM),windows)
-	@echo "Creating Windows service..."
-	scripts\build-windows.bat --service
-else
-	@echo "This target is only available on Windows"
-endif
-
 # Docker targets
 docker-build:
 	docker build -t $(PROJECT_NAME):$(VERSION) .
 
 docker-run:
-	docker run -d --name $(PROJECT_NAME)-$(VERSION) -p 123:123/udp $(PROJECT_NAME):$(VERSION)
+	docker run -d --name $(PROJECT_NAME)-$(VERSION) -p 123:123 $(PROJECT_NAME):$(VERSION)
 
 docker-stop:
 	docker stop $(PROJECT_NAME)-$(VERSION)
@@ -633,36 +468,6 @@ else ifeq ($(PLATFORM),windows)
 	)
 endif
 
-service-uninstall:
-ifeq ($(PLATFORM),macos)
-	@echo "Uninstalling service on macOS..."
-	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
-		sudo launchctl unload /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
-		sudo rm -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
-		echo "Service uninstalled successfully"; \
-	else \
-		echo "Service not found"; \
-	fi
-else ifeq ($(PLATFORM),linux)
-	@echo "Uninstalling service on Linux..."
-	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
-		sudo systemctl stop $(PROJECT_NAME); \
-		sudo systemctl disable $(PROJECT_NAME); \
-		sudo rm -f /etc/systemd/system/$(PROJECT_NAME).service; \
-		sudo systemctl daemon-reload; \
-		echo "Service uninstalled successfully"; \
-	else \
-		echo "Service not found"; \
-	fi
-else ifeq ($(PLATFORM),windows)
-	@echo "Uninstalling service on Windows..."
-	@sc query SimpleNTPDaemon >nul 2>&1 && ( \
-		sc stop SimpleNTPDaemon; \
-		sc delete SimpleNTPDaemon; \
-		echo "Service uninstalled successfully"; \
-	) || echo "Service not found"
-endif
-
 service-status:
 ifeq ($(PLATFORM),macos)
 	@echo "Checking service status on macOS..."
@@ -690,7 +495,320 @@ else ifeq ($(PLATFORM),windows)
 	@sc query SimpleNTPDaemon
 endif
 
-# Service control targets
+# Help - Main help (most common targets)
+help:
+	@echo "Simple NTP Daemon - A lightweight and secure NTP server - Main Help"
+	@echo "=================================="
+	@echo ""
+	@echo "Essential targets:"
+	@echo "  all              - Build the project (default)"
+	@echo "  build            - Build using CMake"
+	@echo "  clean            - Clean build files"
+	@echo "  install          - Install the project"
+	@echo "  uninstall        - Uninstall the project"
+	@echo "  test             - Run tests"
+	@echo "  package          - Build platform-specific packages"
+	@echo "  package-source   - Create source code packages (TAR.GZ + ZIP)"
+	@echo "  package-all      - Create all packages (binary + source)"
+	@echo "  package-info     - Show package information"
+	@echo ""
+	@echo "Development targets:"
+	@echo "  dev-build        - Build in debug mode"
+	@echo "  dev-test         - Run tests in debug mode"
+	@echo "  format           - Format source code"
+	@echo "  lint             - Run static analysis"
+	@echo "  security-scan    - Run security scanning tools"
+	@echo ""
+	@echo "Static binary targets:"
+	@echo "  static-build     - Build static binary (self-contained)"
+	@echo "  static-test      - Run tests on static binary"
+	@echo "  static-package   - Create platform-specific static binary package"
+	@echo "  static-zip       - Create static binary ZIP package"
+	@echo "  static-all       - Create all static binary formats"
+	@echo ""
+	@echo "Dependency management:"
+	@echo "  deps             - Install dependencies"
+	@echo "  dev-deps         - Install development tools"
+	@echo ""
+	@echo "Service management:"
+	@echo "  service-install  - Install system service"
+	@echo "  service-status   - Check service status"
+	@echo "  service-start    - Start service"
+	@echo "  service-stop     - Stop service"
+	@echo ""
+	@echo "Help categories:"
+	@echo "  help-all         - Show all available targets"
+	@echo "  help-build       - Build and development targets"
+	@echo "  help-package     - Package creation targets"
+	@echo "  help-deps        - Dependency management targets"
+	@echo "  help-service     - Service management targets"
+	@echo "  help-docker      - Docker targets"
+	@echo "  help-config      - Configuration management targets"
+	@echo "  help-platform    - Platform-specific targets"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make build       - Build the project"
+	@echo "  make test        - Build and run tests"
+	@echo "  make package     - Create platform-specific packages"
+	@echo "  make dev-deps    - Install development tools"
+	@echo "  make help-all    - Show all available targets"
+
+# Help - All targets (comprehensive)
+help-all:
+	@echo "Simple NTP Daemon - A lightweight and secure NTP server - All Available Targets"
+	@echo "=============================================="
+	@echo ""
+	@echo "Essential targets:"
+	@echo "  all              - Build the project (default)"
+	@echo "  build            - Build using CMake"
+	@echo "  clean            - Clean build files"
+	@echo "  install          - Install the project"
+	@echo "  uninstall        - Uninstall the project"
+	@echo "  test             - Run tests"
+	@echo "  test-verbose     - Run tests with verbose output"
+	@echo "  rebuild          - Clean and rebuild"
+	@echo ""
+	@echo "Package targets:"
+	@echo "  package          - Build platform-specific packages"
+	@echo "  package-source   - Create source code packages (TAR.GZ + ZIP)"
+	@echo "  package-all      - Build all package formats"
+	@echo "  package-info     - Show package information"
+ifeq ($(PLATFORM),macos)
+	@echo "  package-dmg      - Build DMG package (macOS only)"
+	@echo "  package-pkg      - Build PKG package (macOS only)"
+else ifeq ($(PLATFORM),linux)
+	@echo "  package-rpm      - Build RPM package (Linux only)"
+	@echo "  package-deb      - Build DEB package (Linux only)"
+else ifeq ($(PLATFORM),windows)
+	@echo "  package-msi      - Build MSI package (Windows only)"
+	@echo "  package-zip      - Build ZIP package (Windows only)"
+endif
+	@echo ""
+	@echo "Development targets:"
+	@echo "  dev-build        - Build in debug mode"
+	@echo "  dev-test         - Run tests in debug mode"
+	@echo "  debug            - Build with debug information"
+	@echo "  release          - Build with optimization"
+	@echo "  sanitize         - Build with sanitizers"
+	@echo "  docs             - Build documentation"
+	@echo "  analyze          - Run static analysis"
+	@echo ""
+	@echo "Static binary targets:"
+	@echo "  static-build     - Build static binary (self-contained)"
+	@echo "  static-test      - Run tests on static binary"
+	@echo "  static-package   - Create platform-specific static binary package"
+	@echo "  static-zip       - Create static binary ZIP package"
+	@echo "  static-all       - Create all static binary formats"
+	@echo "  coverage         - Generate coverage report"
+	@echo "  format           - Format source code"
+	@echo "  check-style      - Check code style"
+	@echo "  lint             - Run linting tools"
+	@echo "  security-scan    - Run security scanning tools"
+	@echo ""
+	@echo "Dependency management:"
+	@echo "  deps             - Install dependencies"
+	@echo "  dev-deps         - Install development tools"
+	@echo "  runtime-deps     - Runtime dependencies"
+	@echo ""
+	@echo "Service management:"
+	@echo "  service-install  - Install system service"
+	@echo "  service-uninstall- Uninstall system service"
+	@echo "  service-status   - Check service status"
+	@echo "  service-start    - Start service"
+	@echo "  service-stop     - Stop service"
+	@echo "  service-restart  - Restart service"
+	@echo "  service-enable   - Enable service"
+	@echo "  service-disable  - Disable service"
+	@echo ""
+	@echo "Docker targets:"
+	@echo "  docker-build     - Build Docker image"
+	@echo "  docker-run       - Run Docker container"
+	@echo "  docker-stop      - Stop Docker container"
+	@echo ""
+	@echo "Configuration management:"
+	@echo "  config-install   - Install configuration files"
+	@echo "  config-backup    - Backup configuration"
+	@echo "  log-rotate       - Install log rotation"
+	@echo "  backup           - Create full backup"
+	@echo "  restore          - Restore from backup"
+	@echo ""
+	@echo "Cleanup targets:"
+	@echo "  distclean        - Clean all generated files"
+	@echo ""
+	@echo "Legacy targets:"
+	@echo "  start            - Start service (legacy)"
+	@echo "  stop             - Stop service (legacy)"
+	@echo "  restart          - Restart service (legacy)"
+	@echo "  status           - Check service status (legacy)"
+
+# Package source code
+package-source: build
+	@echo "Creating source packages..."
+	@mkdir -p $(DIST_DIR)
+ifeq ($(PLATFORM),windows)
+	@echo "Creating ZIP source package..."
+	powershell -Command "Compress-Archive -Path '$(SRC_DIR)', '$(INCLUDE_DIR)', 'CMakeLists.txt', 'Makefile', 'README.md', 'LICENSE', 'deployment', 'config', 'scripts' -DestinationPath '$(DIST_DIR)\$(PROJECT_NAME)-$(VERSION)-src.zip' -Force"
+	@echo "Creating TAR.GZ source package..."
+	tar -czf $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-src.tar.gz \
+		$(SRC_DIR) \
+		$(INCLUDE_DIR) \
+		CMakeLists.txt \
+		Makefile \
+		README.md \
+		LICENSE \
+		deployment \
+		config \
+		scripts
+else
+	@echo "Creating TAR.GZ source package..."
+	tar -czf $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-src.tar.gz \
+		$(SRC_DIR) \
+		$(INCLUDE_DIR) \
+		CMakeLists.txt \
+		Makefile \
+		README.md \
+		LICENSE \
+		deployment \
+		config \
+		scripts
+	@echo "Creating ZIP source package..."
+	zip -r $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-src.zip \
+		$(SRC_DIR) \
+		$(INCLUDE_DIR) \
+		CMakeLists.txt \
+		Makefile \
+		README.md \
+		LICENSE \
+		deployment \
+		config \
+		scripts
+endif
+	@echo "Source packages created: TAR.GZ and ZIP"
+
+# Package all formats (binary + source)
+package-all: package package-source
+	@echo "All packages created successfully"
+	@echo "Binary packages:"
+	@ls -la $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-*.* 2>/dev/null || echo "No binary packages found"
+	@echo "Source packages:"
+	@ls -la $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-src.* 2>/dev/null || echo "No source packages found"
+
+# Individual package targets for each format
+package-deb: build
+ifeq ($(PLATFORM),linux)
+	@echo "Building DEB package..."
+	@mkdir -p $(DIST_DIR)
+	cd $(BUILD_DIR) && cpack -G DEB
+	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.deb $(DIST_DIR)/
+	@echo "DEB package created: $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-*.deb"
+else
+	@echo "DEB packages are only supported on Linux"
+endif
+
+package-rpm: build
+ifeq ($(PLATFORM),linux)
+	@echo "Building RPM package..."
+	@mkdir -p $(DIST_DIR)
+	cd $(BUILD_DIR) && cpack -G RPM
+	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.rpm $(DIST_DIR)/
+	@echo "RPM package created: $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-*.rpm"
+else
+	@echo "RPM packages are only supported on Linux"
+endif
+
+package-msi: build
+ifeq ($(PLATFORM),windows)
+	@echo "Building MSI package..."
+	@$(MKDIR) $(DIST_DIR)
+	cd $(BUILD_DIR) && cpack -G WIX
+	$(CP) $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.msi $(DIST_DIR)/
+	@echo "MSI package created: $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-*.msi"
+else
+	@echo "MSI packages are only supported on Windows"
+endif
+
+package-exe: build
+ifeq ($(PLATFORM),windows)
+	@echo "Building EXE package..."
+	@$(MKDIR) $(DIST_DIR)
+	cd $(BUILD_DIR) && cpack -G ZIP
+	$(CP) $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.zip $(DIST_DIR)/
+	@echo "EXE package created: $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-*.zip"
+else
+	@echo "EXE packages are only supported on Windows"
+endif
+
+package-dmg: build
+ifeq ($(PLATFORM),macos)
+	@echo "Building DMG package..."
+	@mkdir -p $(DIST_DIR)
+	cd $(BUILD_DIR) && cpack -G DragNDrop
+	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.dmg $(DIST_DIR)/
+	@echo "DMG package created: $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-*.dmg"
+else
+	@echo "DMG packages are only supported on macOS"
+endif
+
+package-pkg: build
+ifeq ($(PLATFORM),macos)
+	@echo "Building PKG package..."
+	@mkdir -p $(DIST_DIR)
+	cd $(BUILD_DIR) && cpack -G productbuild
+	mv $(BUILD_DIR)/$(PROJECT_NAME)-$(VERSION)-*.pkg $(DIST_DIR)/
+	@echo "PKG package created: $(DIST_DIR)/$(PROJECT_NAME)-$(VERSION)-*.pkg"
+else
+	@echo "PKG packages are only supported on macOS"
+endif
+
+# Show package information
+package-info:
+	@echo "Package Information for $(PROJECT_NAME) $(VERSION)"
+	@echo "=============================================="
+	@echo "Platform: $(PLATFORM)"
+	@echo "Build directory: $(BUILD_DIR)"
+	@echo "Distribution directory: $(DIST_DIR)"
+	@echo ""
+	@echo "Available package formats:"
+ifeq ($(PLATFORM),linux)
+	@echo "  - DEB (Debian/Ubuntu)"
+	@echo "  - RPM (Red Hat/CentOS/Fedora)"
+	@echo "  - TAR.GZ (Source)"
+	@echo "  - ZIP (Source)"
+else ifeq ($(PLATFORM),macos)
+	@echo "  - DMG (macOS Disk Image)"
+	@echo "  - PKG (macOS Installer)"
+	@echo "  - TAR.GZ (Source)"
+	@echo "  - ZIP (Source)"
+else ifeq ($(PLATFORM),windows)
+	@echo "  - MSI (Windows Installer)"
+	@echo "  - ZIP (Windows Executable + Source)"
+	@echo "  - TAR.GZ (Source)"
+endif
+	@echo ""
+	@echo "To create packages:"
+	@echo "  make package          - Create platform-specific packages"
+	@echo "  make package-source   - Create source packages"
+	@echo "  make package-all      - Create all packages"
+	@echo "  make package-deb      - Create DEB package (Linux only)"
+	@echo "  make package-rpm      - Create RPM package (Linux only)"
+	@echo "  make package-msi      - Create MSI package (Windows only)"
+	@echo "  make package-dmg      - Create DMG package (macOS only)"
+	@echo "  make package-pkg      - Create PKG package (macOS only)"
+
+# Legacy targets for backward compatibility
+debug: dev-build
+release: build
+sanitize: dev-build
+rebuild: clean build
+test-verbose: test
+
+# Service control targets (legacy)
+start: service-start
+stop: service-stop
+restart: service-restart
+status: service-status
+
+# Additional service management targets
 service-start:
 ifeq ($(PLATFORM),macos)
 	@echo "Starting service on macOS..."
@@ -805,11 +923,35 @@ else ifeq ($(PLATFORM),windows)
 	@sc config SimpleNTPDaemon start= disabled
 endif
 
-# Legacy service targets for compatibility
-start: service-start
-stop: service-stop
-restart: service-restart
-status: service-status
+service-uninstall:
+ifeq ($(PLATFORM),macos)
+	@echo "Uninstalling service on macOS..."
+	@if [ -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist ]; then \
+		sudo launchctl unload /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
+		sudo rm -f /Library/LaunchDaemons/com.$(PROJECT_NAME).$(PROJECT_NAME).plist; \
+		echo "Service uninstalled successfully"; \
+	else \
+		echo "Service not found"; \
+	fi
+else ifeq ($(PLATFORM),linux)
+	@echo "Uninstalling service on Linux..."
+	@if [ -f /etc/systemd/system/$(PROJECT_NAME).service ]; then \
+		sudo systemctl stop $(PROJECT_NAME); \
+		sudo systemctl disable $(PROJECT_NAME); \
+		sudo rm -f /etc/systemd/system/$(PROJECT_NAME).service; \
+		sudo systemctl daemon-reload; \
+		echo "Service uninstalled successfully"; \
+	else \
+		echo "Service not found"; \
+	fi
+else ifeq ($(PLATFORM),windows)
+	@echo "Uninstalling service on Windows..."
+	@sc query SimpleNTPDaemon >nul 2>&1 && ( \
+		sc stop SimpleNTPDaemon; \
+		sc delete SimpleNTPDaemon; \
+		echo "Service uninstalled successfully"; \
+	) || echo "Service not found"
+endif
 
 # Configuration management
 config-install: install
@@ -895,363 +1037,16 @@ else
 	find . -name "*.dll" -delete
 endif
 
-# Legacy targets for compatibility
-debug: dev-build
-release: build
-sanitize: dev-build
-rebuild: clean build
-test-verbose: test
-
-# Help - Main help (most common targets)
-help:
-	@echo "Simple NTP Daemon - Main Help"
-	@echo "============================="
-	@echo ""
-	@echo "Essential targets:"
-	@echo "  all              - Build the project (default)"
-	@echo "  build            - Build using CMake"
-	@echo "  clean            - Clean build files"
-	@echo "  install          - Install the project"
-	@echo "  uninstall        - Uninstall the project"
-	@echo "  test             - Run tests"
-	@echo "  package          - Build platform-specific packages"
-	@echo "  package-source   - Create source code package"
-	@echo ""
-	@echo "Development targets:"
-	@echo "  dev-build        - Build in debug mode"
-	@echo "  dev-test         - Run tests in debug mode"
-	@echo "  format           - Format source code"
-	@echo "  lint             - Run static analysis"
-	@echo "  security-scan    - Run security scanning tools"
-	@echo ""
-	@echo "Dependency management:"
-	@echo "  deps             - Install dependencies"
-	@echo "  dev-deps         - Install development tools"
-	@echo ""
-	@echo "Service management:"
-	@echo "  service-install  - Install system service"
-	@echo "  service-status   - Check service status"
-	@echo "  service-start    - Start service"
-	@echo "  service-stop     - Stop service"
-	@echo ""
-	@echo "Help categories:"
-	@echo "  help-all         - Show all available targets"
-	@echo "  help-build       - Build and development targets"
-	@echo "  help-package     - Package creation targets"
-	@echo "  help-deps        - Dependency management targets"
-	@echo "  help-service     - Service management targets"
-	@echo "  help-docker      - Docker targets"
-	@echo "  help-config      - Configuration management targets"
-	@echo "  help-platform    - Platform-specific targets"
-	@echo ""
-	@echo "Examples:"
-	@echo "  make build       - Build the project"
-	@echo "  make test        - Build and run tests"
-	@echo "  make package     - Create platform-specific packages"
-	@echo "  make dev-deps    - Install development tools"
-	@echo "  make help-all    - Show all available targets"
-
-# Help - All targets (comprehensive)
-help-all:
-	@echo "Simple NTP Daemon - All Available Targets"
-	@echo "========================================="
-	@echo ""
-	@echo "Essential targets:"
-	@echo "  all              - Build the project (default)"
-	@echo "  build            - Build using CMake"
-	@echo "  clean            - Clean build files"
-	@echo "  install          - Install the project"
-	@echo "  uninstall        - Uninstall the project"
-	@echo "  test             - Run tests"
-	@echo "  test-verbose     - Run tests with verbose output"
-	@echo "  rebuild          - Clean and rebuild"
-	@echo ""
-	@echo "Package targets:"
-	@echo "  package          - Build platform-specific packages"
-	@echo "  package-source   - Create source code package"
-	@echo "  package-script   - Build package using platform script"
-	@echo "  package-all      - Build all package formats"
-ifeq ($(PLATFORM),macos)
-	@echo "  package-dmg      - Build DMG package (macOS only)"
-	@echo "  package-pkg      - Build PKG package (macOS only)"
-else ifeq ($(PLATFORM),linux)
-	@echo "  package-rpm      - Build RPM package (Linux only)"
-	@echo "  package-deb      - Build DEB package (Linux only)"
-else ifeq ($(PLATFORM),windows)
-	@echo "  package-msi      - Build MSI package (Windows only)"
-	@echo "  package-zip      - Build ZIP package (Windows only)"
-endif
-	@echo ""
-	@echo "Development targets:"
-	@echo "  dev-build        - Build in debug mode"
-	@echo "  dev-test         - Run tests in debug mode"
-	@echo "  debug            - Build with debug information"
-	@echo "  release          - Build with optimization"
-	@echo "  sanitize         - Build with sanitizers"
-	@echo "  docs             - Build documentation"
-	@echo "  analyze          - Run static analysis"
-	@echo "  coverage         - Generate coverage report"
-	@echo "  format           - Format source code"
-	@echo "  check-style      - Check code style"
-	@echo "  lint             - Run linting tools"
-	@echo "  security-scan    - Run security scanning tools"
-	@echo ""
-	@echo "Dependency management:"
-	@echo "  deps             - Install dependencies"
-	@echo "  dev-deps         - Install development tools (MacPorts)"
-	@echo "  dev-deps-brew    - Install development tools (Homebrew)"
-	@echo "  macos-deps       - macOS-specific dependencies"
-	@echo "  linux-deps       - Linux-specific dependencies"
-	@echo "  windows-deps     - Windows-specific dependencies"
-	@echo "  runtime-deps     - Runtime dependencies"
-	@echo ""
-	@echo "Service management:"
-	@echo "  service-install  - Install system service"
-	@echo "  service-uninstall- Uninstall system service"
-	@echo "  service-status   - Check service status"
-	@echo "  service-start    - Start service"
-	@echo "  service-stop     - Stop service"
-	@echo "  service-restart  - Restart service"
-	@echo "  service-enable   - Enable service"
-	@echo "  service-disable  - Disable service"
-	@echo ""
-	@echo "Docker targets:"
-	@echo "  docker-build     - Build Docker image"
-	@echo "  docker-run       - Run Docker container"
-	@echo "  docker-stop      - Stop Docker container"
-	@echo ""
-	@echo "Configuration management:"
-	@echo "  config-install   - Install configuration files"
-	@echo "  config-backup    - Backup configuration"
-	@echo "  log-rotate       - Install log rotation"
-	@echo "  backup           - Create full backup"
-	@echo "  restore          - Restore from backup"
-	@echo ""
-	@echo "Cleanup targets:"
-	@echo "  distclean        - Clean all generated files"
-	@echo ""
-	@echo "Legacy targets:"
-	@echo "  start            - Start service (legacy)"
-	@echo "  stop             - Stop service (legacy)"
-	@echo "  restart          - Restart service (legacy)"
-	@echo "  status           - Check service status (legacy)"
-
-# Help - Build and development targets
-help-build:
-	@echo "Simple NTP Daemon - Build and Development Targets"
-	@echo "================================================"
-	@echo ""
-	@echo "Essential build targets:"
-	@echo "  all              - Build the project (default)"
-	@echo "  build            - Build using CMake"
-	@echo "  clean            - Clean build files"
-	@echo "  rebuild          - Clean and rebuild"
-	@echo ""
-	@echo "Development build targets:"
-	@echo "  dev-build        - Build in debug mode"
-	@echo "  dev-test         - Run tests in debug mode"
-	@echo "  debug            - Build with debug information"
-	@echo "  release          - Build with optimization"
-	@echo "  sanitize         - Build with sanitizers"
-	@echo ""
-	@echo "Testing targets:"
-	@echo "  test             - Run tests"
-	@echo "  test-verbose     - Run tests with verbose output"
-	@echo ""
-	@echo "Code quality targets:"
-	@echo "  format           - Format source code"
-	@echo "  check-style      - Check code style"
-	@echo "  lint             - Run linting tools"
-	@echo "  security-scan    - Run security scanning tools"
-	@echo "  analyze          - Run static analysis"
-	@echo "  coverage         - Generate coverage report"
-	@echo ""
-	@echo "Documentation:"
-	@echo "  docs             - Build documentation"
-
-# Help - Package creation targets
-help-package:
-	@echo "Simple NTP Daemon - Package Creation Targets"
-	@echo "============================================"
-	@echo ""
-	@echo "Generic package targets:"
-	@echo "  package          - Build platform-specific packages"
-	@echo "  package-source   - Create source code package"
-	@echo "  package-script   - Build package using platform script"
-	@echo "  package-all      - Build all package formats"
-	@echo ""
-	@echo "Platform-specific package targets:"
-ifeq ($(PLATFORM),macos)
-	@echo "  package-dmg      - Build DMG package (macOS only)"
-	@echo "  package-pkg      - Build PKG package (macOS only)"
-	@echo ""
-	@echo "Package Examples:"
-	@echo "  make package      - Creates DMG and PKG files"
-	@echo "  make package-dmg  - Creates only DMG file"
-	@echo "  make package-pkg  - Creates only PKG file"
-	@echo "  make package-all  - Creates DMG, PKG, and script-based packages"
-else ifeq ($(PLATFORM),linux)
-	@echo "  package-rpm      - Build RPM package (Linux only)"
-	@echo "  package-deb      - Build DEB package (Linux only)"
-	@echo ""
-	@echo "Package Examples:"
-	@echo "  make package      - Creates RPM and DEB files"
-	@echo "  make package-rpm  - Creates only RPM file"
-	@echo "  make package-deb  - Creates only DEB file"
-	@echo "  make package-all  - Creates RPM, DEB, and script-based packages"
-else ifeq ($(PLATFORM),windows)
-	@echo "  package-msi      - Build MSI package (Windows only)"
-	@echo "  package-zip      - Build ZIP package (Windows only)"
-	@echo ""
-	@echo "Package Examples:"
-	@echo "  make package      - Creates MSI and ZIP files"
-	@echo "  make package-msi  - Creates only MSI file"
-	@echo "  make package-zip  - Creates only ZIP file"
-	@echo "  make package-all  - Creates MSI, ZIP, and script-based packages"
-endif
-	@echo "  make package-source - Creates source code archive"
-
-# Help - Dependency management targets
-help-deps:
-	@echo "Simple NTP Daemon - Dependency Management Targets"
-	@echo "================================================"
-	@echo ""
-	@echo "General dependencies:"
-	@echo "  deps             - Install dependencies"
-	@echo "  runtime-deps     - Runtime dependencies"
-	@echo ""
-	@echo "Development dependencies:"
-	@echo "  dev-deps         - Install development tools (MacPorts)"
-	@echo "  dev-deps-brew    - Install development tools (Homebrew)"
-	@echo ""
-	@echo "Platform-specific dependencies:"
-	@echo "  macos-deps       - macOS-specific dependencies"
-	@echo "  linux-deps       - Linux-specific dependencies"
-	@echo "  windows-deps     - Windows-specific dependencies"
-	@echo ""
-	@echo "Notes:"
-	@echo "  - dev-deps uses MacPorts on macOS"
-	@echo "  - dev-deps-brew uses Homebrew on macOS"
-	@echo "  - linux-deps auto-detects distribution (apt, yum, dnf, pacman)"
-
-# Help - Service management targets
-help-service:
-	@echo "Simple NTP Daemon - Service Management Targets"
-	@echo "=============================================="
-	@echo ""
-	@echo "Service installation:"
-	@echo "  service-install  - Install system service"
-	@echo "  service-uninstall- Uninstall system service"
-	@echo ""
-	@echo "Service control:"
-	@echo "  service-start    - Start service"
-	@echo "  service-stop     - Stop service"
-	@echo "  service-restart  - Restart service"
-	@echo "  service-status   - Check service status"
-	@echo ""
-	@echo "Service configuration:"
-	@echo "  service-enable   - Enable service (start on boot)"
-	@echo "  service-disable  - Disable service (don't start on boot)"
-	@echo ""
-	@echo "Legacy targets (for compatibility):"
-	@echo "  start            - Start service (legacy)"
-	@echo "  stop             - Stop service (legacy)"
-	@echo "  restart          - Restart service (legacy)"
-	@echo "  status           - Check service status (legacy)"
-	@echo ""
-	@echo "Platform support:"
-	@echo "  - macOS: launchd service"
-	@echo "  - Linux: systemd service"
-	@echo "  - Windows: Windows service"
-
-# Help - Docker targets
-help-docker:
-	@echo "Simple NTP Daemon - Docker Targets"
-	@echo "=================================="
-	@echo ""
-	@echo "Docker image management:"
-	@echo "  docker-build     - Build Docker image"
-	@echo "  docker-run       - Run Docker container"
-	@echo "  docker-stop      - Stop Docker container"
-	@echo ""
-	@echo "Usage examples:"
-	@echo "  make docker-build - Build the Docker image"
-	@echo "  make docker-run   - Start the NTP daemon in a container"
-	@echo "  make docker-stop  - Stop and remove the container"
-
-# Help - Configuration management targets
-help-config:
-	@echo "Simple NTP Daemon - Configuration Management Targets"
-	@echo "==================================================="
-	@echo ""
-	@echo "Configuration installation:"
-	@echo "  config-install   - Install configuration files"
-	@echo "  config-backup    - Backup configuration"
-	@echo ""
-	@echo "Log management:"
-	@echo "  log-rotate       - Install log rotation"
-	@echo ""
-	@echo "Backup and restore:"
-	@echo "  backup           - Create full backup"
-	@echo "  restore          - Restore from backup"
-	@echo ""
-	@echo "Usage examples:"
-	@echo "  make config-install - Install configuration files to system location"
-	@echo "  make config-backup  - Create backup of current configuration"
-	@echo "  make backup         - Create full project backup"
-
-# Help - Platform-specific targets
-help-platform:
-	@echo "Simple NTP Daemon - Platform-Specific Targets"
-	@echo "============================================="
-	@echo ""
-ifeq ($(PLATFORM),macos)
-	@echo "macOS-specific targets:"
-	@echo "  macos-deps       - macOS dependencies via MacPorts"
-	@echo "  dev-deps         - Development tools via MacPorts"
-	@echo "  dev-deps-brew    - Development tools via Homebrew"
-	@echo "  package-dmg      - Build DMG package"
-	@echo "  package-pkg      - Build PKG package"
-	@echo "  package-script   - Build using build-macos.sh"
-	@echo ""
-	@echo "macOS service management:"
-	@echo "  - Uses launchd for service management"
-	@echo "  - Service files installed to /Library/LaunchDaemons/"
-else ifeq ($(PLATFORM),linux)
-	@echo "Linux-specific targets:"
-	@echo "  linux-deps       - Linux dependencies (auto-detects distribution)"
-	@echo "  package-rpm      - Build RPM package"
-	@echo "  package-deb      - Build DEB package"
-	@echo "  package-script   - Build using build-linux.sh"
-	@echo ""
-	@echo "Supported Linux distributions:"
-	@echo "  - Debian/Ubuntu (apt-get)"
-	@echo "  - Red Hat/CentOS (yum)"
-	@echo "  - Fedora (dnf)"
-	@echo "  - Arch Linux (pacman)"
-	@echo ""
-	@echo "Linux service management:"
-	@echo "  - Uses systemd for service management"
-	@echo "  - Service files installed to /etc/systemd/system/
-else ifeq ($(PLATFORM),windows)
-	@echo "Windows-specific targets:"
-	@echo "  windows-deps     - Windows dependencies"
-	@echo "  windows-service  - Create Windows service"
-	@echo "  package-msi      - Build MSI package"
-	@echo "  package-zip      - Build ZIP package"
-	@echo "  package-script   - Build using build-windows.bat"
-	@echo ""
-	@echo "Windows service management:"
-	@echo "  - Uses Windows Service Control Manager"
-	@echo "  - Service name: SimpleNTPDaemon"
-endif
-
 # Phony targets
-.PHONY: all build clean install uninstall test package package-source package-rpm package-deb package-dmg package-pkg package-msi package-zip package-script package-all \
-        dev-build dev-test docs analyze coverage format check-style lint security-scan deps dev-deps dev-deps-brew windows-deps windows-service \
-        docker-build docker-run docker-stop service-install service-uninstall service-status service-start service-stop service-restart service-enable service-disable \
-        config-install config-backup log-rotate backup restore distclean help help-all help-build help-package help-deps help-service help-docker help-config help-platform \
-        debug release sanitize rebuild test-verbose start stop restart status
+.PHONY: all build clean install uninstall test package package-source package-all \
+        package-deb package-rpm package-msi package-exe package-dmg package-pkg package-info \
+        static-build static-test static-package static-zip static-all \
+        dev-build dev-test format check-style lint security-scan deps dev-deps \
+        docker-build docker-run docker-stop service-install service-uninstall service-status \
+        service-start service-stop service-restart service-enable service-disable \
+        config-install config-backup log-rotate backup restore distclean \
+        debug release sanitize rebuild test-verbose start stop restart status \
+        help help-all help-build help-package help-deps help-service help-docker help-config help-platform
 
 # Default target
 .DEFAULT_GOAL := all
