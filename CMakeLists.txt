@@ -79,7 +79,7 @@ if(MSVC)
         target_compile_options(${PROJECT_NAME} PRIVATE /MT)
     endif()
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wno-unused-parameter)
     if(ENABLE_STATIC_LINKING)
         # Only apply static linking flags for GCC, not clang
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
