@@ -81,6 +81,12 @@ public:
   void setSyslog(bool enable, int facility);
 
   /**
+   * @brief Enable or disable structured JSON log output
+   * @param enable Whether to enable JSON structured logs
+   */
+  void setStructuredJson(bool enable);
+
+  /**
    * @brief Log message with custom level
    * @param level Log level
    * @param message Message to log

@@ -250,7 +250,15 @@ void initializeSignalHandlers() {
 #ifdef _WIN32
   signal(SIGBREAK, signalHandler);
 #else
-  signal(SIGHUP, signalHandler);
+  // SIGHUP triggers config reload below
+  signal(SIGHUP, [](int /*sig*/) {
+    if (g_logger) {
+      g_logger->info("Received SIGHUP, reloading configuration");
+    }
+    if (g_server) {
+      g_server->reloadConfig();
+    }
+  });
 #endif
 }
 
@@ -281,6 +289,7 @@ int main(int argc, char *argv[]) {
     } else {
       g_logger->setDestination(LogDestination::FILE);
     }
+    g_logger->setStructuredJson(config->log_json);
 
     // Log startup
     g_logger->info("Starting simple-ntpd v0.1.0");

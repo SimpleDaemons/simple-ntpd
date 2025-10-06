@@ -89,7 +89,7 @@ public:
   Impl()
       : level_(LogLevel::INFO), destination_(LogDestination::CONSOLE),
         log_file_(), enable_syslog_(false), syslog_facility_(LOG_DAEMON),
-        mutex_() {
+        structured_json_(false), mutex_() {
 
     // Initialize syslog on Unix-like systems
 #ifndef _WIN32
@@ -136,6 +136,11 @@ public:
 #endif
   }
 
+  void setStructuredJson(bool enable) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    structured_json_ = enable;
+  }
+
   void log(LogLevel level, const std::string &message, const std::string &file,
            int line) {
     if (level < level_) {
@@ -169,17 +174,40 @@ public:
 private:
   std::string formatMessage(LogLevel level, const std::string &message,
                             const std::string &file, int line) {
-    std::stringstream ss;
-    ss << "[" << getCurrentTimestamp() << "] "
-       << "[" << levelToString(level) << "] "
-       << "[" << getThreadId() << "] ";
+    if (!structured_json_) {
+      std::stringstream ss;
+      ss << "[" << getCurrentTimestamp() << "] "
+         << "[" << levelToString(level) << "] "
+         << "[" << getThreadId() << "] ";
 
-    if (!file.empty()) {
-      ss << "[" << file << ":" << line << "] ";
+      if (!file.empty()) {
+        ss << "[" << file << ":" << line << "] ";
+      }
+
+      ss << message;
+      return ss.str();
     }
 
-    ss << message;
-    return ss.str();
+    // Structured JSON output
+    std::stringstream js;
+    js << "{";
+    js << "\"ts\":\"" << getCurrentTimestamp() << "\",";
+    js << "\"level\":\"" << levelToString(level) << "\",";
+    js << "\"thread\":\"" << getThreadId() << "\",";
+    if (!file.empty()) {
+      js << "\"source\":{\"file\":\"" << file << "\",\"line\":"
+         << line << "},";
+    }
+    // naive JSON escaping for quotes and backslashes
+    std::string escaped = message;
+    for (size_t i = 0; i < escaped.size(); ++i) {
+      if (escaped[i] == '\\' || escaped[i] == '"') {
+        escaped.insert(i, 1, '\\');
+        ++i;
+      }
+    }
+    js << "\"msg\":\"" << escaped << "\"}";
+    return js.str();
   }
 
   void outputToConsole(LogLevel level, const std::string &message) {
@@ -258,6 +286,7 @@ private:
   std::string log_file_;
   bool enable_syslog_;
   int syslog_facility_;
+  bool structured_json_;
   mutable std::mutex mutex_;
 };
 
@@ -284,6 +313,8 @@ void Logger::setLogFile(const std::string &filename) {
 void Logger::setSyslog(bool enable, int facility) {
   impl_->setSyslog(enable, facility);
 }
+
+void Logger::setStructuredJson(bool enable) { impl_->setStructuredJson(enable); }
 
 void Logger::log(LogLevel level, const std::string &message,
                  const std::string &file, int line) {
