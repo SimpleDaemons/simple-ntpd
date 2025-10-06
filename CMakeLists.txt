@@ -134,15 +134,13 @@ endif()
 # Tests
 if(ENABLE_TESTS)
     enable_testing()
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
-        add_subdirectory(tests)
-    else()
-        message(STATUS "No tests directory found, skipping tests")
-    endif()
+    # TODO: Add tests when tests directory is created
+    # add_subdirectory(tests)
 endif()
 
 # Package generation
 if(ENABLE_PACKAGING)
+    include(CPack)
     
     # Package information
     set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
@@ -281,8 +279,7 @@ if(ENABLE_PACKAGING)
         "*.lib"
     )
     
-    # Include CPack configuration
-    include(CPack)
+    # CPack configuration is already included above
 endif()
 
 # Print configuration summary
