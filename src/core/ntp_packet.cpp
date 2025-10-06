@@ -316,7 +316,7 @@ template <typename T> T NtpPacketHandler::ntoh(T value) const {
   return value;
 }
 
-std::chrono::milliseconds NtpPacketHandler::calculateRoundTripDelay(
+std::chrono::microseconds NtpPacketHandler::calculateRoundTripDelay(
     const NtpTimestamp &t1, const NtpTimestamp &t2, const NtpTimestamp &t3,
     const NtpTimestamp &t4) const {
 
@@ -328,10 +328,10 @@ std::chrono::milliseconds NtpPacketHandler::calculateRoundTripDelay(
 
   // Calculate RTT = (t4 - t1) - (t3 - t2)
   auto delay = (time4 - time1) - (time3 - time2);
-  return std::chrono::duration_cast<std::chrono::milliseconds>(delay);
+  return std::chrono::duration_cast<std::chrono::microseconds>(delay);
 }
 
-std::chrono::milliseconds NtpPacketHandler::calculateOffset(
+std::chrono::microseconds NtpPacketHandler::calculateOffset(
     const NtpTimestamp &t1, const NtpTimestamp &t2, const NtpTimestamp &t3,
     const NtpTimestamp &t4) const {
 
@@ -343,7 +343,7 @@ std::chrono::milliseconds NtpPacketHandler::calculateOffset(
 
   // Calculate offset = ((t2 - t1) + (t3 - t4)) / 2
   auto offset = ((time2 - time1) + (time3 - time4)) / 2;
-  return std::chrono::duration_cast<std::chrono::milliseconds>(offset);
+  return std::chrono::duration_cast<std::chrono::microseconds>(offset);
 }
 
 // NtpTimestamp implementation

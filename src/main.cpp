@@ -22,6 +22,7 @@ using namespace simple_ntpd;
 std::shared_ptr<NtpServer> g_server;
 Logger *g_logger = nullptr;
 std::atomic<bool> g_shutdown_requested(false);
+static std::string g_startup_command;
 
 /**
  * @brief Signal handler for graceful shutdown
@@ -208,6 +209,7 @@ bool parseCommandLine(int argc, char *argv[],
   // Handle commands
   if (command == "start") {
     // Start server logic will be handled in main
+    g_startup_command = command;
     return true;
   } else if (command == "stop") {
     std::cout << "Stop command not implemented yet" << std::endl;
@@ -219,8 +221,9 @@ bool parseCommandLine(int argc, char *argv[],
     std::cout << "Status command not implemented yet" << std::endl;
     return false;
   } else if (command == "reload") {
-    std::cout << "Reload command not implemented yet" << std::endl;
-    return false;
+    // We'll perform a one-shot reload after startup in main()
+    g_startup_command = command;
+    return true;
   } else if (command == "test") {
     std::cout << "Test command not implemented yet" << std::endl;
     return false;
@@ -248,7 +251,15 @@ void initializeSignalHandlers() {
   signal(SIGQUIT, signalHandler);
 
 #ifdef _WIN32
-  signal(SIGBREAK, signalHandler);
+  // On Windows, use SIGBREAK (Ctrl+Break) to trigger config reload
+  signal(SIGBREAK, [](int /*sig*/) {
+    if (g_logger) {
+      g_logger->info("Received SIGBREAK, reloading configuration");
+    }
+    if (g_server) {
+      g_server->reloadConfig();
+    }
+  });
 #else
   // SIGHUP triggers config reload below
   signal(SIGHUP, [](int /*sig*/) {
@@ -311,6 +322,15 @@ int main(int argc, char *argv[]) {
     g_logger->info("NTP server started successfully");
     g_logger->info("Listening on " + config->listen_address + ":" +
                    std::to_string(config->listen_port));
+
+    // If the command is 'reload', perform a one-shot reload and exit
+    if (g_startup_command == "reload") {
+      g_logger->info("Performing one-shot configuration reload");
+      g_server->reloadConfig();
+      g_logger->info("Reload completed; exiting as requested");
+      g_server->stop();
+      return 0;
+    }
 
     // Main server loop
     while (g_server->isRunning() && !g_shutdown_requested) {

@@ -36,9 +36,9 @@
   - [ ] Checksum verification
   - [x] Version compatibility checks
   - [x] Mode validation
-- [ ] Improved timestamp precision
-  - [ ] Microsecond precision support
-  - [ ] Better fraction handling
+- [x] Improved timestamp precision
+  - [x] Microsecond precision support
+  - [x] Better fraction handling
   - [ ] Leap second awareness
 - [ ] Better error handling and recovery
   - [ ] Graceful error recovery
@@ -54,10 +54,10 @@
   - [ ] Resource cleanup
 
 ### Configuration Enhancements
-- [ ] Dynamic configuration reloading
-  - [ ] SIGHUP signal handling
-  - [ ] Configuration file watching
-  - [ ] Validation before reload
+- [x] Dynamic configuration reloading
+  - [x] SIGHUP signal handling (Unix) / SIGBREAK (Windows)
+  - [x] Configuration file watching (portable mtime polling)
+  - [x] Validation before reload
 - [ ] Configuration validation improvements
   - [ ] Schema validation
   - [ ] Value range checking

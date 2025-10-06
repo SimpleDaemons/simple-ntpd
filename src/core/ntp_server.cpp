@@ -28,7 +28,10 @@ NtpServer::NtpServer(std::shared_ptr<NtpConfig> config,
       server_address_(config->listen_address),
       server_port_(config->listen_port), active_connections_(),
       connections_mutex_(), accept_thread_(), worker_threads_(),
-      workers_running_(false), stats_(), stats_mutex_(),
+      workers_running_(false),
+      config_watch_thread_(), config_watch_running_(false),
+      config_last_write_time_(),
+      stats_(), stats_mutex_(),
       config_change_callback_(),
       last_cleanup_time_(std::chrono::steady_clock::now()),
       cleanup_interval_(std::chrono::seconds(300)) {
@@ -63,6 +66,9 @@ bool NtpServer::start() {
 
   // Start worker threads
   startWorkerThreads();
+
+  // Start config watcher thread (portable mtime polling)
+  startConfigWatcher();
 
   running_ = true;
   stats_.start_time = std::chrono::steady_clock::now();
@@ -136,6 +142,9 @@ void NtpServer::stop() {
   // Stop worker threads
   stopWorkerThreads();
 
+  // Stop config watcher
+  stopConfigWatcher();
+
   // Close all connections
   cleanupConnections();
 
@@ -172,6 +181,60 @@ bool NtpServer::initializeSocket() {
   }
 
   return true;
+}
+
+void NtpServer::startConfigWatcher() {
+  const std::string &cfg_path = config_ ? config_->lastConfigFile() : std::string();
+  if (cfg_path.empty()) {
+    return;
+  }
+
+  // Initialize last write time to current so we only react to future changes
+  config_last_write_time_ = std::chrono::system_clock::now();
+  config_watch_running_ = true;
+  config_watch_thread_ = std::thread(&NtpServer::configWatcherLoop, this);
+}
+
+void NtpServer::stopConfigWatcher() {
+  config_watch_running_ = false;
+  if (config_watch_thread_.joinable()) {
+    config_watch_thread_.join();
+  }
+}
+
+void NtpServer::configWatcherLoop() {
+  using namespace std::chrono_literals;
+  const std::string cfg_path = config_->lastConfigFile();
+  if (cfg_path.empty()) {
+    return;
+  }
+
+  while (config_watch_running_) {
+    std::this_thread::sleep_for(2s);
+
+    // Portable mtime polling using std::filesystem if available
+#if __has_include(<filesystem>)
+    try {
+      namespace fs = std::filesystem;
+      auto current_write = fs::last_write_time(fs::path(cfg_path));
+      // Convert file_time_type to system_clock::time_point for comparison
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+      auto current_sys = std::chrono::clock_cast<std::chrono::system_clock>(current_write);
+#else
+      auto current_sys = std::chrono::system_clock::now(); // Fallback: trigger reload only once
+#endif
+      if (config_last_write_time_.time_since_epoch().count() == 0) {
+        config_last_write_time_ = current_sys;
+      } else if (current_sys > config_last_write_time_) {
+        logger_->info("Config file modification detected, reloading");
+        config_last_write_time_ = current_sys;
+        reloadConfig();
+      }
+    } catch (...) {
+      // Ignore polling errors
+    }
+#endif
+  }
 }
 
 bool NtpServer::bindSocket() {

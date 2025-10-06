@@ -19,6 +19,9 @@ BUILD_DIR = build
 DIST_DIR = dist
 PACKAGE_DIR = packaging
 
+# Parallel jobs (can be overridden: make JOBS=8)
+JOBS ?= $(PARALLEL_JOBS)
+
 # Platform detection
 UNAME_S := $(shell uname -s)
 ifeq ($(OS),Windows_NT)
@@ -124,7 +127,7 @@ build: $(BUILD_DIR)-dir
 ifeq ($(PLATFORM),windows)
 	cd $(BUILD_DIR) && cmake .. -G "Visual Studio 16 2019" -A x64 && cmake --build . --config Release
 else
-	cd $(BUILD_DIR) && cmake .. && make -j$(PARALLEL_JOBS)
+	cd $(BUILD_DIR) && cmake .. && $(MAKE) -j$(JOBS)
 endif
 
 # Clean build
@@ -200,7 +203,7 @@ dev-build: $(BUILD_DIR)-dir
 ifeq ($(PLATFORM),windows)
 	cd $(BUILD_DIR) && cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Debug && cmake --build . --config Debug
 else
-	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Debug && make -j$(PARALLEL_JOBS)
+	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Debug && $(MAKE) -j$(JOBS)
 endif
 
 dev-test: dev-build
@@ -216,7 +219,7 @@ static-build: $(BUILD_DIR)-dir
 ifeq ($(PLATFORM),windows)
 	cd $(BUILD_DIR) && cmake .. -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC_LINKING=ON && cmake --build . --config Release
 else
-	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC_LINKING=ON && make -j$(PARALLEL_JOBS)
+	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_STATIC_LINKING=ON && $(MAKE) -j$(JOBS)
 endif
 
 static-test: static-build

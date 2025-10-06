@@ -247,6 +247,14 @@ private:
   std::vector<std::thread> worker_threads_;
   std::atomic<bool> workers_running_;
 
+  // Config watching
+  std::thread config_watch_thread_;
+  std::atomic<bool> config_watch_running_;
+  std::chrono::system_clock::time_point config_last_write_time_;
+  void startConfigWatcher();
+  void stopConfigWatcher();
+  void configWatcherLoop();
+
   // Statistics
   NtpServerStats stats_;
   mutable std::mutex stats_mutex_;

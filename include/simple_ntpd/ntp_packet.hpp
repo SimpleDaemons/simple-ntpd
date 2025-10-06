@@ -218,7 +218,9 @@ public:
    */
   bool isServerResponse(const NtpPacket &packet) const;
 
-private:
+  /**
+   * @brief Calculate round trip delay (microseconds precision)
+   */
   /**
    * @brief Convert host byte order to network byte order
    * @param value Value to convert
@@ -241,7 +243,7 @@ private:
    * @param t4 Response timestamp
    * @return Round trip delay in milliseconds
    */
-  std::chrono::milliseconds
+  std::chrono::microseconds
   calculateRoundTripDelay(const NtpTimestamp &t1, const NtpTimestamp &t2,
                           const NtpTimestamp &t3, const NtpTimestamp &t4) const;
 
@@ -253,10 +255,11 @@ private:
    * @param t4 Response timestamp
    * @return Offset in milliseconds
    */
-  std::chrono::milliseconds calculateOffset(const NtpTimestamp &t1,
+  std::chrono::microseconds calculateOffset(const NtpTimestamp &t1,
                                             const NtpTimestamp &t2,
                                             const NtpTimestamp &t3,
                                             const NtpTimestamp &t4) const;
+private:
 };
 
 } // namespace simple_ntpd
