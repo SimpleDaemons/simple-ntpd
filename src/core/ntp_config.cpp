@@ -1,17 +1,9 @@
-/*
- * Copyright 2024 SimpleDaemons
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/**
+ * @file ntp_config.cpp
+ * @brief NTP server configuration implementation
+ * @author SimpleDaemons
+ * @copyright 2024 SimpleDaemons
+ * @license Apache-2.0
  */
 
 #include "simple_ntpd/ntp_config.hpp"
@@ -33,6 +25,7 @@ void NtpConfig::setDefaults() {
 
   stratum = NtpStratum::SECONDARY_REFERENCE;
   reference_clock = "LOCAL";
+  reference_id = "LOCL";
   upstream_servers = {"pool.ntp.org", "time.nist.gov"};
   sync_interval = std::chrono::seconds(64);
   timeout = std::chrono::milliseconds(1000);
@@ -119,6 +112,7 @@ std::string NtpConfig::toString() const {
   ss << "  Max Connections: " << max_connections << "\n";
   ss << "  Stratum: " << static_cast<int>(stratum) << "\n";
   ss << "  Reference Clock: " << reference_clock << "\n";
+  ss << "  Reference ID: " << reference_id << "\n";
   ss << "  Worker Threads: " << worker_threads << "\n";
   ss << "  Log Level: " << static_cast<int>(log_level) << "\n";
   ss << "  Log File: " << log_file << "\n";
@@ -220,6 +214,8 @@ bool NtpConfig::parseCommandLineArg(const std::string &key,
     }
   } else if (lower_key == "reference_clock" || lower_key == "ref_clock") {
     reference_clock = value;
+  } else if (lower_key == "reference_id" || lower_key == "ref_id") {
+    reference_id = value;
   } else if (lower_key == "upstream_servers" || lower_key == "servers") {
     // Parse comma-separated list
     std::stringstream ss(value);
