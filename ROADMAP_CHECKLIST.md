@@ -79,7 +79,7 @@
 - [ ] Enhanced logging with structured output
   - [x] JSON log format
   - [x] Log rotation (size-based)
-  - [ ] Log aggregation support
+  - [x] Log aggregation support (syslog, JSON to stdout, rotated files)
 - [x] Metrics collection (Prometheus format)
   - [x] Request/response metrics
   - [x] Performance metrics (proc time, throughput)

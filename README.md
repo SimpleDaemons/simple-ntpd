@@ -353,6 +353,47 @@ make analyze
 make check-style
 ```
 
+## Log Aggregation Support
+
+Aggregate logs via syslog, stdout JSON, or rotated files:
+
+- Enable syslog for system collectors
+- Enable console logging with JSON for container scraping
+- Use rotated files with agents (Fluent Bit/Filebeat)
+
+Configuration examples:
+
+```ini
+# INI
+enable_syslog = true
+enable_console_logging = true
+log_json = true
+log_file = /var/log/simple-ntpd/simple-ntpd.log
+log_max_size_bytes = 10485760
+log_max_files = 5
+```
+
+```yaml
+# YAML
+enable_syslog: true
+enable_console_logging: true
+log_json: true
+log_file: /var/log/simple-ntpd/simple-ntpd.log
+log_max_size_bytes: 10485760
+log_max_files: 5
+```
+
+```json
+{
+  "enable_syslog": true,
+  "enable_console_logging": true,
+  "log_json": true,
+  "log_file": "/var/log/simple-ntpd/simple-ntpd.log",
+  "log_max_size_bytes": 10485760,
+  "log_max_files": 5
+}
+```
+
 ## Contributing
 
 1. Fork the repository
