@@ -80,6 +80,7 @@ public:
   LogLevel log_level;
   bool enable_console_logging;
   bool enable_syslog;
+  bool log_json;
 
   // Security configuration
   bool enable_authentication;
@@ -103,6 +104,19 @@ public:
   bool enable_leap_second_handling;
 
 private:
+  // Path of last-loaded configuration file (if any)
+  std::string last_config_file_;
+
+public:
+  /**
+   * @brief Return last loaded config file path or empty if none
+   */
+  const std::string &lastConfigFile() const { return last_config_file_; }
+
+  /**
+   * @brief Set last loaded config file path
+   */
+  void setLastConfigFile(const std::string &path) { last_config_file_ = path; }
   /**
    * @brief Set default values
    */

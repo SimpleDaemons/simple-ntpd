@@ -14,6 +14,9 @@
 #include <cstring>
 #include <sstream>
 #include <thread>
+#ifndef _WIN32
+#include <syslog.h>
+#endif
 
 namespace simple_ntpd {
 
@@ -68,6 +71,56 @@ bool NtpServer::start() {
   logger_->info("Listening on " + config_->listen_address + ":" +
                 std::to_string(config_->listen_port));
 
+  return true;
+}
+bool NtpServer::reloadConfig() {
+  if (!config_) {
+    return false;
+  }
+
+  const std::string &cfg_path = config_->lastConfigFile();
+  if (cfg_path.empty()) {
+    logger_->warning("Reload requested but no config file path recorded");
+    return false;
+  }
+
+  auto new_config = std::make_shared<NtpConfig>(*config_);
+  if (!new_config->loadFromFile(cfg_path) || !new_config->validate()) {
+    logger_->error("Config reload failed: invalid configuration");
+    return false;
+  }
+
+  // Apply dynamic fields without full restart
+  {
+    // Update logging settings
+    logger_->setLevel(new_config->log_level);
+    logger_->setLogFile(new_config->log_file);
+    if (new_config->enable_console_logging && new_config->log_file.size()) {
+      logger_->setDestination(LogDestination::BOTH);
+    } else if (new_config->enable_console_logging) {
+      logger_->setDestination(LogDestination::CONSOLE);
+    } else {
+      logger_->setDestination(LogDestination::FILE);
+    }
+#ifndef _WIN32
+    logger_->setSyslog(new_config->enable_syslog, LOG_DAEMON);
+#endif
+    logger_->setStructuredJson(new_config->log_json);
+  }
+
+  // Networking parameters generally require restart; log if changed
+  bool address_changed = (new_config->listen_address != server_address_ ||
+                          new_config->listen_port != server_port_);
+  if (address_changed) {
+    logger_->warning("listen_address/port changed; full restart required to apply");
+  }
+
+  // Replace config pointer
+  config_ = new_config;
+  logger_->info("Configuration reloaded successfully");
+  if (config_change_callback_) {
+    config_change_callback_();
+  }
   return true;
 }
 

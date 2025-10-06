@@ -34,6 +34,7 @@ void NtpConfig::setDefaults() {
   log_file = "/var/log/simple-ntpd/simple-ntpd.log";
   enable_console_logging = true;
   enable_syslog = true;
+  log_json = false;
 
   enable_authentication = false;
   authentication_key = "";
@@ -54,7 +55,11 @@ void NtpConfig::setDefaults() {
 }
 
 bool NtpConfig::loadFromFile(const std::string &config_file) {
-  return parseConfigFile(config_file);
+  bool ok = parseConfigFile(config_file);
+  if (ok) {
+    setLastConfigFile(config_file);
+  }
+  return ok;
 }
 
 bool NtpConfig::loadFromCommandLine(int argc, char *argv[]) {
@@ -260,6 +265,8 @@ bool NtpConfig::parseCommandLineArg(const std::string &key,
         (value == "true" || value == "1" || value == "yes");
   } else if (lower_key == "enable_syslog" || lower_key == "syslog") {
     enable_syslog = (value == "true" || value == "1" || value == "yes");
+  } else if (lower_key == "log_json" || lower_key == "json_logs") {
+    log_json = (value == "true" || value == "1" || value == "yes");
   } else if (lower_key == "enable_authentication" || lower_key == "auth") {
     enable_authentication = (value == "true" || value == "1" || value == "yes");
   } else if (lower_key == "authentication_key" || lower_key == "auth_key") {
