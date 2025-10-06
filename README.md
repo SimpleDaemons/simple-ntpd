@@ -6,7 +6,10 @@ A lightweight, high-performance NTP (Network Time Protocol) daemon written in C+
 
 - **High Performance**: Optimized for low-latency time synchronization
 - **Cross-Platform**: Supports macOS, Linux, and Windows
-- **Configurable**: Flexible configuration options
+- **Multi-Format Configuration**: INI, JSON, and YAML configuration support
+- **Structured Logging**: JSON structured logging with configurable output
+- **Enhanced Validation**: Comprehensive NTP packet validation and error reporting
+- **Comprehensive Testing**: Unit tests with automated test framework
 - **Secure**: Built with security best practices
 - **Containerized**: Full Docker support for development and deployment
 
@@ -37,9 +40,33 @@ make build
 # Run tests
 make test
 
+# Run specific tests
+make test-ntp-packet    # NTP packet functionality tests
+make test-ntp-config    # Configuration system tests
+
 # Install
 make install
 ```
+
+### Configuration Formats
+
+The daemon supports multiple configuration formats:
+
+```bash
+# INI format
+./simple-ntpd --config config.ini
+
+# JSON format  
+./simple-ntpd --config config.json
+
+# YAML format
+./simple-ntpd --config config.yaml
+```
+
+Example configurations are available in `config/examples/`:
+- `simple-ntpd.json` - JSON configuration example
+- `simple-ntpd.yaml` - YAML configuration example
+- `simple-ntpd.conf` - INI configuration example
 
 ## Help System
 
@@ -60,6 +87,42 @@ make help-service     # Service management targets
 make help-docker      # Docker targets
 make help-config      # Configuration management targets
 make help-platform    # Platform-specific targets
+```
+
+## Testing
+
+The project includes comprehensive unit tests:
+
+```bash
+# Run all tests
+make test
+
+# Run specific test suites
+cd build && ./test_ntp_packet    # NTP packet functionality
+cd build && ./test_ntp_config    # Configuration system
+
+# Run tests with verbose output
+make test-verbose
+
+# Run tests in debug mode
+make dev-test
+```
+
+## Static Binary Support
+
+Create self-contained static binaries:
+
+```bash
+# Build static binary
+make static-build
+
+# Test static binary
+make static-test
+
+# Create static binary packages
+make static-package   # Platform-specific package
+make static-zip       # Cross-platform ZIP package
+make static-all       # All static binary formats
 ```
 
 ## Docker Infrastructure
@@ -101,6 +164,52 @@ Use the build script for automated cross-platform building:
 ./scripts/build-docker.sh --clean
 ```
 
+## Configuration
+
+### Multi-Format Support
+
+The daemon supports three configuration formats with automatic detection:
+
+#### INI Format
+```ini
+[ntp]
+listen_address = 0.0.0.0
+listen_port = 123
+log_level = info
+log_json = false
+reference_id = LOCL
+```
+
+#### JSON Format
+```json
+{
+  "ntp": {
+    "listen_address": "0.0.0.0",
+    "listen_port": 123,
+    "log_level": "info",
+    "log_json": true,
+    "reference_id": "LOCL"
+  }
+}
+```
+
+#### YAML Format
+```yaml
+ntp:
+  listen_address: "0.0.0.0"
+  listen_port: 123
+  log_level: "info"
+  log_json: true
+  reference_id: "LOCL"
+```
+
+### Configuration Features
+
+- **Automatic Format Detection**: Based on file extension (.ini, .json, .yaml)
+- **Structured Logging**: JSON output with `log_json = true`
+- **Validation**: Comprehensive configuration validation
+- **Error Reporting**: Detailed error messages for invalid configurations
+
 ## Development
 
 ### Prerequisites
@@ -128,8 +237,12 @@ make security-scan
 ### Testing
 
 ```bash
-# Run tests
+# Run all tests
 make test
+
+# Run specific test suites
+cd build && ./test_ntp_packet    # NTP packet functionality
+cd build && ./test_ntp_config    # Configuration system
 
 # Run tests with verbose output
 make test-verbose
@@ -167,6 +280,23 @@ make package-source
 
 # Create all package formats
 make package-all
+```
+
+### Static Binary Support
+
+Create self-contained static binaries:
+
+```bash
+# Build static binary
+make static-build
+
+# Test static binary
+make static-test
+
+# Create static binary packages
+make static-package   # Platform-specific package
+make static-zip       # Cross-platform ZIP package
+make static-all       # All static binary formats
 ```
 
 ## Service Management
