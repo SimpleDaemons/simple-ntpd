@@ -45,6 +45,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
 file(GLOB_RECURSE HEADERS "include/*.hpp" "include/*.h")
 
+# Create library for linking with tests
+add_library(${PROJECT_NAME}_lib STATIC ${SOURCES} ${HEADERS})
+
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
@@ -134,8 +137,44 @@ endif()
 # Tests
 if(ENABLE_TESTS)
     enable_testing()
-    # TODO: Add tests when tests directory is created
-    # add_subdirectory(tests)
+    
+    # Unit tests
+    add_executable(test_ntp_packet tests/unit/test_ntp_packet.cpp)
+    target_link_libraries(test_ntp_packet ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_packet PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if(ENABLE_SSL)
+        target_link_libraries(test_ntp_packet OpenSSL::SSL OpenSSL::Crypto)
+    endif()
+    if(ENABLE_JSON)
+        target_link_libraries(test_ntp_packet ${JSONCPP_LIBRARIES})
+        target_include_directories(test_ntp_packet PRIVATE ${JSONCPP_INCLUDE_DIRS})
+        target_compile_options(test_ntp_packet PRIVATE ${JSONCPP_CFLAGS_OTHER})
+        target_link_directories(test_ntp_packet PRIVATE ${JSONCPP_LIBRARY_DIRS})
+    endif()
+    
+    add_executable(test_ntp_config tests/unit/test_ntp_config.cpp)
+    target_link_libraries(test_ntp_config ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_config PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if(ENABLE_SSL)
+        target_link_libraries(test_ntp_config OpenSSL::SSL OpenSSL::Crypto)
+    endif()
+    if(ENABLE_JSON)
+        target_link_libraries(test_ntp_config ${JSONCPP_LIBRARIES})
+        target_include_directories(test_ntp_config PRIVATE ${JSONCPP_INCLUDE_DIRS})
+        target_compile_options(test_ntp_config PRIVATE ${JSONCPP_CFLAGS_OTHER})
+        target_link_directories(test_ntp_config PRIVATE ${JSONCPP_LIBRARY_DIRS})
+    endif()
+    
+    # Add test targets
+    add_test(NAME ntp_packet_tests COMMAND test_ntp_packet)
+    add_test(NAME ntp_config_tests COMMAND test_ntp_config)
+    
+    # Add custom test target
+    add_custom_target(run_tests
+        COMMAND ${CMAKE_CTEST_COMMAND} --verbose
+        DEPENDS test_ntp_packet test_ntp_config
+        COMMENT "Running all tests"
+    )
 endif()
 
 # Package generation

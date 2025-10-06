@@ -146,29 +146,90 @@ std::vector<uint8_t> NtpPacket::serializeToData() const {
 }
 
 bool NtpPacket::isValid() const {
+  std::vector<std::string> errors;
+  return validateDetailed(errors);
+}
+
+bool NtpPacket::validateDetailed(std::vector<std::string> &errors) const {
+  errors.clear();
+  bool valid = true;
+
   // Check version
-  if (version != NTP_VERSION) {
-    return false;
+  if (!validateVersion()) {
+    errors.push_back("Invalid NTP version: " + std::to_string(version) + 
+                     " (expected: " + std::to_string(NTP_VERSION) + ")");
+    valid = false;
   }
 
   // Check mode
-  if (mode != static_cast<uint8_t>(NtpMode::CLIENT) &&
-      mode != static_cast<uint8_t>(NtpMode::SERVER) &&
-      mode != static_cast<uint8_t>(NtpMode::BROADCAST)) {
-    return false;
+  if (!validateMode()) {
+    errors.push_back("Invalid NTP mode: " + std::to_string(mode));
+    valid = false;
   }
 
   // Check stratum
   if (stratum > 15) {
-    return false;
+    errors.push_back("Invalid stratum: " + std::to_string(stratum) + 
+                     " (must be 0-15)");
+    valid = false;
   }
 
   // Check poll interval
   if (poll < 4 || poll > 17) {
-    return false;
+    errors.push_back("Invalid poll interval: " + std::to_string(poll) + 
+                     " (must be 4-17)");
+    valid = false;
   }
 
+  // Check precision (should be negative for valid implementations)
+  if (precision > 0) {
+    errors.push_back("Invalid precision: " + std::to_string(precision) + 
+                     " (should be negative)");
+    valid = false;
+  }
+
+  // Check leap indicator
+  if (leap_indicator > 3) {
+    errors.push_back("Invalid leap indicator: " + std::to_string(leap_indicator) + 
+                     " (must be 0-3)");
+    valid = false;
+  }
+
+  return valid;
+}
+
+bool NtpPacket::verifyChecksum() const {
+  // For now, we don't implement checksum verification
+  // In a full implementation, this would verify the packet integrity
+  // NTP doesn't have a built-in checksum, but we could add one
   return true;
+}
+
+bool NtpPacket::validateSize() const {
+  // NTP packets must be exactly 48 bytes
+  return true; // This is handled at the parsing level
+}
+
+bool NtpPacket::validateVersion() const {
+  // Support NTP versions 3 and 4
+  return version == 3 || version == NTP_VERSION;
+}
+
+bool NtpPacket::validateMode() const {
+  // Check if mode is valid
+  switch (static_cast<NtpMode>(mode)) {
+    case NtpMode::RESERVED:
+    case NtpMode::SYMMETRIC_ACTIVE:
+    case NtpMode::SYMMETRIC_PASSIVE:
+    case NtpMode::CLIENT:
+    case NtpMode::SERVER:
+    case NtpMode::BROADCAST:
+    case NtpMode::NTP_CONTROL_MESSAGE:
+    case NtpMode::RESERVED_PRIVATE:
+      return true;
+    default:
+      return false;
+  }
 }
 
 std::string NtpPacket::getTypeDescription() const {

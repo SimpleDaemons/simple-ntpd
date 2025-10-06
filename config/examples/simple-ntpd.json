@@ -1,0 +1,17 @@
+{
+  "listen_address": "0.0.0.0",
+  "listen_port": 123,
+  "stratum": 2,
+  "reference_id": "LOCL",
+  "worker_threads": 4,
+  "log_level": 1,
+  "log_file": "/var/log/simple-ntpd/simple-ntpd.log",
+  "enable_console_logging": true,
+  "enable_syslog": true,
+  "log_json": false,
+  "enable_statistics": true,
+  "max_connections": 1000,
+  "upstream_servers": "pool.ntp.org,time.nist.gov",
+  "sync_interval": 64,
+  "timeout": 1000
+}

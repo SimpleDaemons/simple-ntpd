@@ -259,14 +259,19 @@ public:
         std::string value = trim(line.substr(colon_pos + 1));
         
         // Remove quotes and commas
-        if (key.front() == '"' && key.back() == '"') {
+        if (key.length() >= 2 && key.front() == '"' && key.back() == '"') {
           key = key.substr(1, key.length() - 2);
         }
-        if (value.front() == '"' && value.back() == '"') {
+        if (value.length() >= 2 && value.front() == '"' && value.back() == '"') {
           value = value.substr(1, value.length() - 2);
         }
-        if (value.back() == ',') {
+        if (value.length() > 0 && value.back() == ',') {
           value = value.substr(0, value.length() - 1);
+        }
+        
+        // Additional cleanup for JSON - remove any remaining quotes
+        if (value.length() >= 2 && value.front() == '"' && value.back() == '"') {
+          value = value.substr(1, value.length() - 2);
         }
         
         parseKeyValue(key, value, config);

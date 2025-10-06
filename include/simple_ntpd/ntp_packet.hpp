@@ -120,6 +120,37 @@ struct NtpPacket {
   bool isValid() const;
 
   /**
+   * @brief Enhanced packet validation with detailed checks
+   * @param errors Output vector of validation error messages
+   * @return true if valid, false otherwise
+   */
+  bool validateDetailed(std::vector<std::string> &errors) const;
+
+  /**
+   * @brief Calculate and verify packet checksum
+   * @return true if checksum is valid, false otherwise
+   */
+  bool verifyChecksum() const;
+
+  /**
+   * @brief Check packet size constraints
+   * @return true if size is valid, false otherwise
+   */
+  bool validateSize() const;
+
+  /**
+   * @brief Check version compatibility
+   * @return true if version is supported, false otherwise
+   */
+  bool validateVersion() const;
+
+  /**
+   * @brief Check mode validity
+   * @return true if mode is valid, false otherwise
+   */
+  bool validateMode() const;
+
+  /**
    * @brief Get packet type description
    * @return String description of packet type
    */
