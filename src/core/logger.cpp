@@ -89,7 +89,7 @@ public:
   Impl()
       : level_(LogLevel::INFO), destination_(LogDestination::CONSOLE),
         log_file_(), enable_syslog_(false), syslog_facility_(LOG_DAEMON),
-        structured_json_(false), mutex_() {
+        structured_json_(false), rotate_max_size_bytes_(0), rotate_max_files_(5), mutex_() {
 
     // Initialize syslog on Unix-like systems
 #ifndef _WIN32
@@ -120,6 +120,12 @@ public:
   void setLogFile(const std::string &filename) {
     std::lock_guard<std::mutex> lock(mutex_);
     log_file_ = filename;
+  }
+
+  void setLogRotation(uint64_t max_size_bytes, uint32_t max_files) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    rotate_max_size_bytes_ = max_size_bytes;
+    rotate_max_files_ = std::max(1u, max_files);
   }
 
   void setSyslog(bool enable, int facility) {
@@ -267,11 +273,46 @@ private:
   }
 
   void outputToFile(const std::string &message) {
+    // Rotate if needed
+    if (!log_file_.empty() && rotate_max_size_bytes_ > 0) {
+      std::error_code ec;
+#if __has_include(<filesystem>)
+      namespace fs = std::filesystem;
+      if (fs::exists(log_file_, ec)) {
+        auto sz = fs::file_size(log_file_, ec);
+        if (!ec && sz >= rotate_max_size_bytes_) {
+          rotateLogs();
+        }
+      }
+#endif
+    }
+
     std::ofstream file(log_file_, std::ios::app);
     if (file.is_open()) {
       file << message << std::endl;
       file.close();
     }
+  }
+
+  void rotateLogs() {
+#if __has_include(<filesystem>)
+    namespace fs = std::filesystem;
+    // Remove oldest
+    std::error_code ec;
+    fs::remove(log_file_ + "." + std::to_string(rotate_max_files_), ec);
+    // Shift others
+    for (int i = static_cast<int>(rotate_max_files_) - 1; i >= 1; --i) {
+      std::string src = log_file_ + "." + std::to_string(i);
+      std::string dst = log_file_ + "." + std::to_string(i + 1);
+      if (fs::exists(src, ec)) {
+        fs::rename(src, dst, ec);
+      }
+    }
+    // Current to .1
+    if (fs::exists(log_file_, ec)) {
+      fs::rename(log_file_, log_file_ + ".1", ec);
+    }
+#endif
   }
 
   void outputToSyslog(LogLevel level, const std::string &message) {
@@ -287,6 +328,8 @@ private:
   bool enable_syslog_;
   int syslog_facility_;
   bool structured_json_;
+  uint64_t rotate_max_size_bytes_;
+  uint32_t rotate_max_files_;
   mutable std::mutex mutex_;
 };
 
@@ -308,6 +351,10 @@ void Logger::setDestination(LogDestination destination) {
 
 void Logger::setLogFile(const std::string &filename) {
   impl_->setLogFile(filename);
+}
+
+void Logger::setLogRotation(uint64_t max_size_bytes, uint32_t max_files) {
+  impl_->setLogRotation(max_size_bytes, max_files);
 }
 
 void Logger::setSyslog(bool enable, int facility) {

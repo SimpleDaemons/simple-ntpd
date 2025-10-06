@@ -35,6 +35,8 @@ void NtpConfig::setDefaults() {
   enable_console_logging = true;
   enable_syslog = true;
   log_json = false;
+  log_max_size_bytes = 0;
+  log_max_files = 5;
 
   enable_authentication = false;
   authentication_key = "";
@@ -267,6 +269,18 @@ bool NtpConfig::parseCommandLineArg(const std::string &key,
     enable_syslog = (value == "true" || value == "1" || value == "yes");
   } else if (lower_key == "log_json" || lower_key == "json_logs") {
     log_json = (value == "true" || value == "1" || value == "yes");
+  } else if (lower_key == "log_max_size_bytes" || lower_key == "log_max_size") {
+    try {
+      log_max_size_bytes = static_cast<uint64_t>(std::stoull(value));
+    } catch (const std::exception &) {
+      return false;
+    }
+  } else if (lower_key == "log_max_files") {
+    try {
+      log_max_files = static_cast<uint32_t>(std::stoul(value));
+    } catch (const std::exception &) {
+      return false;
+    }
   } else if (lower_key == "enable_authentication" || lower_key == "auth") {
     enable_authentication = (value == "true" || value == "1" || value == "yes");
   } else if (lower_key == "authentication_key" || lower_key == "auth_key") {

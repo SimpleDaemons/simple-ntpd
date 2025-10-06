@@ -309,6 +309,7 @@ int main(int argc, char *argv[]) {
       g_logger->setDestination(LogDestination::FILE);
     }
     g_logger->setStructuredJson(config->log_json);
+  g_logger->setLogRotation(config->log_max_size_bytes, config->log_max_files);
 
     // Log startup
     g_logger->info("Starting simple-ntpd v0.1.0");

@@ -81,6 +81,9 @@ public:
   bool enable_console_logging;
   bool enable_syslog;
   bool log_json;
+  // Log rotation
+  uint64_t log_max_size_bytes; // 0 disables rotation
+  uint32_t log_max_files;      // number of rotated files to keep
 
   // Security configuration
   bool enable_authentication;

@@ -112,6 +112,7 @@ bool NtpServer::reloadConfig() {
     logger_->setSyslog(new_config->enable_syslog, LOG_DAEMON);
 #endif
     logger_->setStructuredJson(new_config->log_json);
+    logger_->setLogRotation(new_config->log_max_size_bytes, new_config->log_max_files);
   }
 
   // Networking parameters generally require restart; log if changed

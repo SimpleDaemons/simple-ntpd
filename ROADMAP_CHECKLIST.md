@@ -78,7 +78,7 @@
 ### Monitoring & Observability
 - [ ] Enhanced logging with structured output
   - [x] JSON log format
-  - [ ] Log rotation
+  - [x] Log rotation (size-based)
   - [ ] Log aggregation support
 - [x] Metrics collection (Prometheus format)
   - [x] Request/response metrics

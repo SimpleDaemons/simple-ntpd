@@ -74,6 +74,13 @@ public:
   void setLogFile(const std::string &filename);
 
   /**
+   * @brief Configure size-based log rotation
+   * @param max_size_bytes Max size before rotation (0 disables)
+   * @param max_files Number of rotated files to keep
+   */
+  void setLogRotation(uint64_t max_size_bytes, uint32_t max_files);
+
+  /**
    * @brief Enable/disable syslog
    * @param enable Whether to enable syslog
    * @param facility Syslog facility
