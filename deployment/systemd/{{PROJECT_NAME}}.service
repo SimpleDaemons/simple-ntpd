@@ -1,0 +1,17 @@
+[Unit]
+Description=Simple NTP Daemon - A lightweight and secure NTP server
+After=network.target
+
+[Service]
+Type=simple
+User=simple-ntpd
+Group=simple-ntpd
+ExecStart=/usr/local/bin/simple-ntpd
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=simple-ntpd
+
+[Install]
+WantedBy=multi-user.target

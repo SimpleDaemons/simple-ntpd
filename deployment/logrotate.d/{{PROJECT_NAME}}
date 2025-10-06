@@ -1,0 +1,14 @@
+/var/log/simple-ntpd/*.log {
+    daily
+    missingok
+    rotate 52
+    compress
+    delaycompress
+    notifempty
+    create 644 _simple-ntpd _simple-ntpd
+    postrotate
+        /bin/systemctl reload simple-ntpd > /dev/null 2>&1 || true
+    endscript
+    sharedscripts
+    su _simple-ntpd _simple-ntpd
+}
