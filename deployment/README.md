@@ -1,447 +1,341 @@
-# Simple NTP Daemon Deployment Guide
+# simple-ntpd Deployment
 
-This directory contains all the necessary files and scripts for deploying the Simple NTP Daemon on various systems.
+This directory contains deployment configurations and examples for simple-ntpd.
 
 ## Directory Structure
 
 ```
 deployment/
-├── README.md                    # This file
-├── DEPLOYMENT_CHECKLIST.md      # Comprehensive deployment checklist
-├── QUICK_START_GUIDES.md        # Platform-specific quick start guides
-├── systemd/                     # Systemd service files
-│   ├── simple-ntpd.service
-│   ├── simple-ntpd.socket
-│   └── simple-ntpd.target
-├── init.d/                      # Traditional init.d scripts
+├── systemd/                    # Linux systemd service files
+│   └── simple-ntpd.service
+├── launchd/                    # macOS launchd service files
+│   └── com.simple-ntpd.simple-ntpd.plist
+├── logrotate.d/                # Linux log rotation configuration
 │   └── simple-ntpd
-├── launchd/                     # macOS launchd service
-│   └── com.simpledaemons.simple-ntpd.plist
-├── windows/                     # Windows service installation
-│   ├── install-service.bat
-│   ├── install-service.ps1
-│   └── simple-ntpd-service.cpp
-├── configs/                     # Configuration templates
-│   ├── production.conf          # Production configuration
-│   └── development.conf         # Development configuration
-├── templates/                   # System configuration templates
-│   ├── logrotate.conf          # Log rotation configuration
-│   └── firewall.conf           # Firewall configuration templates
-├── examples/                    # Deployment examples
-│   ├── docker/                 # Docker deployment
-│   │   ├── docker-compose.yml
-│   │   └── README.md
-│   ├── kubernetes/             # Kubernetes deployment
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   ├── configmap.yaml
-│   │   ├── namespace.yaml
-│   │   ├── serviceaccount.yaml
-│   │   └── README.md
-│   └── monitoring/             # Monitoring and observability
-│       ├── prometheus.yml      # Prometheus configuration
-│       ├── alerting-rules.yml  # Alerting rules
-│       └── README.md           # Monitoring guide
-└── scripts/                    # Deployment scripts
-    └── install.sh
+├── windows/                    # Windows service management
+│   └── simple-ntpd.service.bat
+└── examples/                   # Deployment examples
+    └── docker/                 # Docker deployment examples
+        ├── docker-compose.yml
+        └── README.md
 ```
 
-## Deployment Methods
+## Platform-Specific Deployment
 
-### 1. Quick Start Guides
+### Linux (systemd)
 
-For platform-specific deployment instructions, see:
-- **Linux**: [Linux Quick Start Guide](QUICK_START_GUIDES.md#linux-quick-start-systemd)
-- **Docker**: [Docker Quick Start Guide](QUICK_START_GUIDES.md#docker-quick-start)
-- **Kubernetes**: [Kubernetes Quick Start Guide](QUICK_START_GUIDES.md#kubernetes-quick-start)
-- **macOS**: [macOS Quick Start Guide](QUICK_START_GUIDES.md#macos-quick-start)
-- **Windows**: [Windows Quick Start Guide](QUICK_START_GUIDES.md#windows-quick-start)
+1. **Install the service file:**
+   ```bash
+   sudo cp deployment/systemd/simple-ntpd.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   ```
 
-### 2. Configuration Templates
+2. **Create user and group:**
+   ```bash
+   sudo useradd --system --no-create-home --shell /bin/false simple-ntpd
+   ```
 
-Ready-to-use configuration files:
-- **Production**: [Production Configuration](configs/production.conf) - Optimized for high-performance production environments
-- **Development**: [Development Configuration](configs/development.conf) - Suitable for development and testing
+3. **Enable and start the service:**
+   ```bash
+   sudo systemctl enable simple-ntpd
+   sudo systemctl start simple-ntpd
+   ```
 
-### 3. System Integration Templates
+4. **Check status:**
+   ```bash
+   sudo systemctl status simple-ntpd
+   sudo journalctl -u simple-ntpd -f
+   ```
 
-- **Log Rotation**: [Logrotate Configuration](templates/logrotate.conf) - Automatic log management
-- **Firewall Rules**: [Firewall Configuration](templates/firewall.conf) - Platform-specific firewall setup
+### macOS (launchd)
 
-### 4. Container Deployment
+1. **Install the plist file:**
+   ```bash
+   sudo cp deployment/launchd/com.simple-ntpd.simple-ntpd.plist /Library/LaunchDaemons/
+   sudo chown root:wheel /Library/LaunchDaemons/com.simple-ntpd.simple-ntpd.plist
+   ```
 
-- **Docker**: Complete Docker Compose setup with [Docker Guide](examples/docker/README.md)
-- **Kubernetes**: Production-ready Kubernetes manifests with [Kubernetes Guide](examples/kubernetes/README.md)
+2. **Load and start the service:**
+   ```bash
+   sudo launchctl load /Library/LaunchDaemons/com.simple-ntpd.simple-ntpd.plist
+   sudo launchctl start com.simple-ntpd.simple-ntpd
+   ```
 
-### 5. Monitoring and Observability
+3. **Check status:**
+   ```bash
+   sudo launchctl list | grep simple-ntpd
+   tail -f /var/log/simple-ntpd.log
+   ```
 
-- **Prometheus**: [Prometheus Configuration](examples/monitoring/prometheus.yml) - Metrics collection
-- **Alerting**: [Alerting Rules](examples/monitoring/alerting-rules.yml) - Comprehensive alerting
-- **Monitoring Guide**: [Complete Monitoring Guide](examples/monitoring/README.md) - Setup and best practices
+### Windows
 
-### 6. Deployment Checklist
+1. **Run as Administrator:**
+   ```cmd
+   # Install service
+   deployment\windows\simple-ntpd.service.bat install
+   
+   # Start service
+   deployment\windows\simple-ntpd.service.bat start
+   
+   # Check status
+   deployment\windows\simple-ntpd.service.bat status
+   ```
 
-Use the [Deployment Checklist](DEPLOYMENT_CHECKLIST.md) to ensure complete and secure deployment.
+2. **Service management:**
+   ```cmd
+   # Stop service
+   deployment\windows\simple-ntpd.service.bat stop
+   
+   # Restart service
+   deployment\windows\simple-ntpd.service.bat restart
+   
+   # Uninstall service
+   deployment\windows\simple-ntpd.service.bat uninstall
+   ```
 
-### 7. Automated Installation Script
+## Log Rotation (Linux)
 
-The `scripts/install.sh` script provides a comprehensive, automated installation process:
+1. **Install logrotate configuration:**
+   ```bash
+   sudo cp deployment/logrotate.d/simple-ntpd /etc/logrotate.d/
+   ```
 
-```bash
-# Full installation (recommended)
-sudo ./deployment/scripts/install.sh
+2. **Test logrotate configuration:**
+   ```bash
+   sudo logrotate -d /etc/logrotate.d/simple-ntpd
+   ```
 
-# Installation without building (for pre-built packages)
-sudo ./deployment/scripts/install.sh --skip-build
+3. **Force log rotation:**
+   ```bash
+   sudo logrotate -f /etc/logrotate.d/simple-ntpd
+   ```
 
-# Installation without systemd (for older systems)
-sudo ./deployment/scripts/install.sh --skip-systemd
+## Docker Deployment
 
-# Show all options
-./deployment/scripts/install.sh --help
-```
+See [examples/docker/README.md](examples/docker/README.md) for detailed Docker deployment instructions.
 
-**Features:**
-- Automatic OS detection
-- Dependency checking
-- Service user/group creation
-- Directory setup with proper permissions
-- Systemd service installation
-- Init.d script installation
-- Firewall configuration
-- Log rotation setup
-- Installation verification
-
-### 2. Manual Installation
-
-#### Prerequisites
-
-```bash
-# Create service user and group
-sudo groupadd -r ntp
-sudo useradd -r -g ntp -s /bin/false -d /var/lib/simple-ntpd ntp
-
-# Create required directories
-sudo mkdir -p /etc/simple-ntpd
-sudo mkdir -p /var/log/simple-ntpd
-sudo mkdir -p /var/lib/simple-ntpd
-sudo mkdir -p /var/run/simple-ntpd
-
-# Set permissions
-sudo chown -R ntp:ntp /var/log/simple-ntpd /var/lib/simple-ntpd /var/run/simple-ntpd
-sudo chmod 755 /var/log/simple-ntpd /var/lib/simple-ntpd /var/run/simple-ntpd
-sudo chmod 755 /etc/simple-ntpd
-```
-
-#### Build and Install
-
-```bash
-# Build the project
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
-
-# Install
-sudo make install
-
-# Copy configuration
-sudo cp ../config/simple-ntpd.conf.example /etc/simple-ntpd/simple-ntpd.conf
-sudo chown ntp:ntp /etc/simple-ntpd/simple-ntpd.conf
-sudo chmod 644 /etc/simple-ntpd/simple-ntpd.conf
-```
-
-## Service Management
-
-### Systemd (Modern Linux Systems)
-
-#### Installation
+### Quick Start
 
 ```bash
-# Copy service files
-sudo cp deployment/systemd/*.service /etc/systemd/system/
-sudo cp deployment/systemd/*.socket /etc/systemd/system/
-sudo cp deployment/systemd/*.target /etc/systemd/system/
-
-# Reload systemd
-sudo systemctl daemon-reload
-
-# Enable services
-sudo systemctl enable simple-ntpd.socket
-sudo systemctl enable simple-ntpd.service
-```
-
-#### Management
-
-```bash
-# Start the service
-sudo systemctl start simple-ntpd
+# Build and run with Docker Compose
+cd deployment/examples/docker
+docker-compose up -d
 
 # Check status
-sudo systemctl status simple-ntpd
-
-# Stop the service
-sudo systemctl stop simple-ntpd
-
-# Restart the service
-sudo systemctl restart simple-ntpd
-
-# Reload configuration
-sudo systemctl reload simple-ntpd
-
-# View logs
-sudo journalctl -u simple-ntpd -f
-```
-
-### Init.d (Traditional Linux Systems)
-
-#### Installation
-
-```bash
-# Copy init.d script
-sudo cp deployment/init.d/simple-ntpd /etc/init.d/
-sudo chmod 755 /etc/init.d/simple-ntpd
-
-# Enable service
-sudo update-rc.d simple-ntpd defaults  # Debian/Ubuntu
-# OR
-sudo chkconfig --add simple-ntpd       # RedHat/CentOS
-sudo chkconfig --level 2345 simple-ntpd on
-```
-
-#### Management
-
-```bash
-# Start the service
-sudo /etc/init.d/simple-ntpd start
-
-# Check status
-sudo /etc/init.d/simple-ntpd status
-
-# Stop the service
-sudo /etc/init.d/simple-ntpd stop
-
-# Restart the service
-sudo /etc/init.d/simple-ntpd restart
-
-# Reload configuration
-sudo /etc/init.d/simple-ntpd reload
-
-# Test configuration
-sudo /etc/init.d/simple-ntpd configtest
+docker-compose ps
+docker-compose logs simple-ntpd
 ```
 
 ## Configuration
 
-### Configuration File
+### Service Configuration
 
-The main configuration file is located at `/etc/simple-ntpd/simple-ntpd.conf`. An example configuration is provided in `config/simple-ntpd.conf.example`.
+Each platform has specific configuration requirements:
 
-Key configuration sections:
-- **Network**: Listen address, port, IPv6 support
-- **NTP Server**: Stratum level, reference clock, upstream servers
-- **Logging**: Log levels, output destinations
-- **Security**: Authentication, access control
-- **Performance**: Worker threads, packet sizes
+- **Linux**: Edit `/etc/systemd/system/simple-ntpd.service`
+- **macOS**: Edit `/Library/LaunchDaemons/com.simple-ntpd.simple-ntpd.plist`
+- **Windows**: Edit the service binary path in the batch file
 
-### Environment Variables
+### Application Configuration
 
-The following environment variables can be used to override configuration:
-
-```bash
-export SIMPLE_NTPD_LISTEN_ADDRESS="0.0.0.0"
-export SIMPLE_NTPD_LISTEN_PORT="123"
-export SIMPLE_NTPD_STRATUM="2"
-export SIMPLE_NTPD_LOG_LEVEL="INFO"
-```
+Place your application configuration in:
+- **Linux/macOS**: `/etc/simple-ntpd/simple-ntpd.conf`
+- **Windows**: `%PROGRAMFILES%\simple-ntpd\simple-ntpd.conf`
 
 ## Security Considerations
 
-### Service User
+### User and Permissions
 
-The daemon runs as the `ntp` user with minimal privileges:
-- No shell access (`/bin/false`)
-- Restricted home directory (`/var/lib/simple-ntpd`)
-- Minimal file permissions
+1. **Create dedicated user:**
+   ```bash
+   # Linux
+   sudo useradd --system --no-create-home --shell /bin/false simple-ntpd
+   
+   # macOS
+   sudo dscl . -create /Users/_simple-ntpd UserShell /usr/bin/false
+   sudo dscl . -create /Users/_simple-ntpd UniqueID 200
+   sudo dscl . -create /Users/_simple-ntpd PrimaryGroupID 200
+   sudo dscl . -create /Groups/_simple-ntpd GroupID 200
+   ```
 
-### File Permissions
+2. **Set proper permissions:**
+   ```bash
+   # Configuration files
+   sudo chown root:simple-ntpd /etc/simple-ntpd/simple-ntpd.conf
+   sudo chmod 640 /etc/simple-ntpd/simple-ntpd.conf
+   
+   # Log files
+   sudo chown simple-ntpd:simple-ntpd /var/log/simple-ntpd/
+   sudo chmod 755 /var/log/simple-ntpd/
+   ```
+
+### Firewall Configuration
+
+Configure firewall rules as needed:
 
 ```bash
-# Configuration files
-/etc/simple-ntpd/simple-ntpd.conf     # 644, ntp:ntp
+# Linux (ufw)
+sudo ufw allow 123/tcp
 
-# Runtime directories
-/var/run/simple-ntpd/                 # 755, ntp:ntp
-/var/log/simple-ntpd/                 # 755, ntp:ntp
-/var/lib/simple-ntpd/                 # 755, ntp:ntp
+# Linux (firewalld)
+sudo firewall-cmd --permanent --add-port=123/tcp
+sudo firewall-cmd --reload
 
-# Binary and libraries
-/usr/local/bin/simple-ntpd            # 755, root:root
-/usr/local/lib/libsimple-ntpd-core.a # 644, root:root
+# macOS
+sudo pfctl -f /etc/pf.conf
 ```
 
-### Network Security
-
-- Only UDP port 123 is opened
-- Firewall rules are automatically configured
-- No incoming connections are accepted (UDP only)
-
-## Monitoring and Logging
-
-### Log Files
-
-- **Application logs**: `/var/log/simple-ntpd/`
-- **System logs**: `journalctl -u simple-ntpd` (systemd)
-- **Log rotation**: Configured via `/etc/logrotate.d/simple-ntpd`
+## Monitoring
 
 ### Health Checks
 
-```bash
-# Check service status
-sudo systemctl is-active simple-ntpd
+1. **Service status:**
+   ```bash
+   # Linux
+   sudo systemctl is-active simple-ntpd
+   
+   # macOS
+   sudo launchctl list | grep simple-ntpd
+   
+   # Windows
+   sc query simple-ntpd
+   ```
 
-# Check NTP service
-ntpdate -q localhost
+2. **Port availability:**
+   ```bash
+   netstat -tlnp | grep 123
+   ss -tlnp | grep 123
+   ```
 
-# Check listening ports
-sudo netstat -ulnp | grep :123
-sudo ss -ulnp | grep :123
+3. **Process monitoring:**
+   ```bash
+   ps aux | grep simple-ntpd
+   top -p $(pgrep simple-ntpd)
+   ```
 
-# Check process
-ps aux | grep simple-ntpd
-```
+### Log Monitoring
+
+1. **Real-time logs:**
+   ```bash
+   # Linux
+   sudo journalctl -u simple-ntpd -f
+   
+   # macOS
+   tail -f /var/log/simple-ntpd.log
+   
+   # Windows
+   # Use Event Viewer or PowerShell Get-WinEvent
+   ```
+
+2. **Log analysis:**
+   ```bash
+   # Search for errors
+   sudo journalctl -u simple-ntpd --since "1 hour ago" | grep -i error
+   
+   # Count log entries
+   sudo journalctl -u simple-ntpd --since "1 day ago" | wc -l
+   ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Permission Denied**
-   ```bash
-   # Check user/group
-   id ntp
-   # Check file permissions
-   ls -la /etc/simple-ntpd/
-   ```
+1. **Service won't start:**
+   - Check configuration file syntax
+   - Verify user permissions
+   - Check port availability
+   - Review service logs
 
-2. **Port Already in Use**
-   ```bash
-   # Check what's using port 123
-   sudo lsof -i :123
-   sudo netstat -ulnp | grep :123
-   ```
+2. **Permission denied:**
+   - Ensure service user exists
+   - Check file permissions
+   - Verify directory ownership
 
-3. **Service Won't Start**
-   ```bash
-   # Check logs
-   sudo journalctl -u simple-ntpd -n 50
-   # Check configuration
-   sudo /etc/init.d/simple-ntpd configtest
-   ```
+3. **Port already in use:**
+   - Check what's using the port: `netstat -tlnp | grep 123`
+   - Stop conflicting service or change port
 
-4. **Firewall Issues**
-   ```bash
-   # Check firewall status
-   sudo firewall-cmd --list-services
-   sudo ufw status
-   ```
+4. **Service stops unexpectedly:**
+   - Check application logs
+   - Verify resource limits
+   - Review system logs
 
 ### Debug Mode
 
-```bash
-# Run in foreground with debug logging
-sudo simple-ntpd --verbose --foreground start
+Run the service in debug mode for troubleshooting:
 
-# Check configuration
-sudo simple-ntpd --test-config --config /etc/simple-ntpd/simple-ntpd.conf
+```bash
+# Linux/macOS
+sudo -u simple-ntpd /usr/local/bin/simple-ntpd --debug
+
+# Windows
+simple-ntpd.exe --debug
 ```
 
-## Platform-Specific Notes
+### Log Levels
 
-### Ubuntu/Debian
+Adjust log level for more verbose output:
 
 ```bash
-# Install dependencies
-sudo apt update
-sudo apt install build-essential cmake libc6-dev
+# Set log level in configuration
+log_level = debug
 
-# Service management
-sudo systemctl enable simple-ntpd
-sudo systemctl start simple-ntpd
+# Or via environment variable
+export SIMPLE-NTPD_LOG_LEVEL=debug
 ```
 
-### CentOS/RHEL
+## Backup and Recovery
+
+### Configuration Backup
 
 ```bash
-# Install dependencies
-sudo yum groupinstall "Development Tools"
-sudo yum install cmake glibc-devel
+# Backup configuration
+sudo tar -czf simple-ntpd-config-backup-$(date +%Y%m%d).tar.gz /etc/simple-ntpd/
 
-# Service management
-sudo systemctl enable simple-ntpd
-sudo systemctl start simple-ntpd
+# Backup logs
+sudo tar -czf simple-ntpd-logs-backup-$(date +%Y%m%d).tar.gz /var/log/simple-ntpd/
 ```
 
-### macOS
+### Service Recovery
 
 ```bash
-# Install dependencies
-brew install cmake
-
-# Build with specific architecture
-cmake -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" ..
-make
-```
-
-### Windows
-
-```bash
-# Install Visual Studio Build Tools
-# Use CMake GUI or command line
-cmake -G "Visual Studio 16 2019" ..
-cmake --build . --config Release
-```
-
-## Uninstallation
-
-### Complete Removal
-
-```bash
-# Stop and disable services
+# Stop service
 sudo systemctl stop simple-ntpd
-sudo systemctl disable simple-ntpd
 
-# Remove service files
-sudo rm -f /etc/systemd/system/simple-ntpd.*
+# Restore configuration
+sudo tar -xzf simple-ntpd-config-backup-YYYYMMDD.tar.gz -C /
 
-# Remove init.d script
-sudo rm -f /etc/init.d/simple-ntpd
-
-# Remove application files
-sudo rm -f /usr/local/bin/simple-ntpd
-sudo rm -f /usr/local/lib/libsimple-ntpd-core.a
-sudo rm -rf /usr/local/lib/cmake/simple-ntpd
-
-# Remove configuration and data
-sudo rm -rf /etc/simple-ntpd
-sudo rm -rf /var/log/simple-ntpd
-sudo rm -rf /var/lib/simple-ntpd
-sudo rm -rf /var/run/simple-ntpd
-
-# Remove service user
-sudo userdel ntp
-sudo groupdel ntp
-
-# Remove log rotation
-sudo rm -f /etc/logrotate.d/simple-ntpd
+# Start service
+sudo systemctl start simple-ntpd
 ```
 
-## Support
+## Updates
 
-For deployment issues and questions:
+### Service Update Process
 
-- Check the troubleshooting section above
-- Review system logs and service status
-- Ensure all prerequisites are met
-- Verify file permissions and ownership
-- Check firewall and network configuration
+1. **Stop service:**
+   ```bash
+   sudo systemctl stop simple-ntpd
+   ```
 
-For additional help, refer to the main project README or create an issue in the project repository.
+2. **Backup current version:**
+   ```bash
+   sudo cp /usr/local/bin/simple-ntpd /usr/local/bin/simple-ntpd.backup
+   ```
+
+3. **Install new version:**
+   ```bash
+   sudo cp simple-ntpd /usr/local/bin/
+   sudo chmod +x /usr/local/bin/simple-ntpd
+   ```
+
+4. **Start service:**
+   ```bash
+   sudo systemctl start simple-ntpd
+   ```
+
+5. **Verify update:**
+   ```bash
+   sudo systemctl status simple-ntpd
+   simple-ntpd --version
+   ```
