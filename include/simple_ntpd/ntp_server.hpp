@@ -35,12 +35,19 @@ struct NtpServerStats {
   uint64_t total_responses;
   uint64_t total_bytes_transferred;
   uint64_t total_errors;
+  // Performance tracking
+  uint64_t total_request_processing_time_us;
+  uint64_t processed_request_count;
+  uint64_t max_request_processing_time_us;
+  uint64_t min_request_processing_time_us;
   std::chrono::steady_clock::time_point start_time;
   std::chrono::steady_clock::time_point last_activity;
 
   NtpServerStats()
       : total_connections(0), active_connections(0), total_requests(0),
-        total_responses(0), total_bytes_transferred(0), total_errors(0) {}
+        total_responses(0), total_bytes_transferred(0), total_errors(0),
+        total_request_processing_time_us(0), processed_request_count(0),
+        max_request_processing_time_us(0), min_request_processing_time_us(UINT64_MAX) {}
 };
 
 /**
@@ -101,6 +108,12 @@ public:
    * @return Server statistics
    */
   NtpServerStats getStats() const;
+
+  /**
+   * @brief Export Prometheus metrics in text format
+   * @return Metrics string
+   */
+  std::string exportPrometheusMetrics() const;
 
   /**
    * @brief Reload configuration

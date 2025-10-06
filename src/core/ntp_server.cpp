@@ -337,6 +337,7 @@ void NtpServer::processIncomingPackets() {
 
 void NtpServer::processPacket(const std::vector<uint8_t> &data,
                               const struct sockaddr_in &client_addr) {
+  auto start_us = std::chrono::steady_clock::now();
   char client_ip[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
   uint16_t client_port = ntohs(client_addr.sin_port);
@@ -356,6 +357,17 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
     stats_.total_bytes_transferred += data.size();
   } else {
     stats_.total_errors++;
+  }
+
+  auto end_us = std::chrono::steady_clock::now();
+  auto dur_us = std::chrono::duration_cast<std::chrono::microseconds>(end_us - start_us).count();
+  stats_.total_request_processing_time_us += static_cast<uint64_t>(dur_us);
+  stats_.processed_request_count++;
+  if (static_cast<uint64_t>(dur_us) > stats_.max_request_processing_time_us) {
+    stats_.max_request_processing_time_us = static_cast<uint64_t>(dur_us);
+  }
+  if (static_cast<uint64_t>(dur_us) < stats_.min_request_processing_time_us) {
+    stats_.min_request_processing_time_us = static_cast<uint64_t>(dur_us);
   }
 }
 
@@ -433,9 +445,47 @@ std::string NtpServer::getStatus() const {
     ss << "  Total Requests: " << stats_.total_requests << "\n";
     ss << "  Total Bytes: " << stats_.total_bytes_transferred << "\n";
     ss << "  Total Errors: " << stats_.total_errors << "\n";
+    if (stats_.processed_request_count > 0) {
+      double avg_us = static_cast<double>(stats_.total_request_processing_time_us) /
+                      static_cast<double>(stats_.processed_request_count);
+      ss << "  Avg Proc Time (us): " << static_cast<uint64_t>(avg_us) << "\n";
+      ss << "  Max Proc Time (us): " << stats_.max_request_processing_time_us << "\n";
+      ss << "  Min Proc Time (us): " << stats_.min_request_processing_time_us << "\n";
+      double throughput = static_cast<double>(stats_.total_requests) /
+                          std::max(1.0, static_cast<double>(uptime_seconds));
+      ss << "  Throughput (req/s): " << throughput << "\n";
+    }
   }
 
   return ss.str();
+}
+
+std::string NtpServer::exportPrometheusMetrics() const {
+  std::stringstream m;
+  m << "# HELP simple_ntpd_requests_total Total NTP requests processed\n";
+  m << "# TYPE simple_ntpd_requests_total counter\n";
+  m << "simple_ntpd_requests_total " << stats_.total_requests << "\n";
+
+  m << "# HELP simple_ntpd_errors_total Total NTP errors\n";
+  m << "# TYPE simple_ntpd_errors_total counter\n";
+  m << "simple_ntpd_errors_total " << stats_.total_errors << "\n";
+
+  m << "# HELP simple_ntpd_bytes_total Total bytes transferred\n";
+  m << "# TYPE simple_ntpd_bytes_total counter\n";
+  m << "simple_ntpd_bytes_total " << stats_.total_bytes_transferred << "\n";
+
+  m << "# HELP simple_ntpd_request_proc_time_us Request processing time (us)\n";
+  m << "# TYPE simple_ntpd_request_proc_time_us summary\n";
+  double avg_us = stats_.processed_request_count == 0 ? 0.0 :
+                  static_cast<double>(stats_.total_request_processing_time_us) /
+                  static_cast<double>(stats_.processed_request_count);
+  m << "simple_ntpd_request_proc_time_us_count " << stats_.processed_request_count << "\n";
+  m << "simple_ntpd_request_proc_time_us_sum " << stats_.total_request_processing_time_us << "\n";
+  m << "simple_ntpd_request_proc_time_us_avg " << static_cast<uint64_t>(avg_us) << "\n";
+  m << "simple_ntpd_request_proc_time_us_max " << stats_.max_request_processing_time_us << "\n";
+  m << "simple_ntpd_request_proc_time_us_min " << (stats_.min_request_processing_time_us == UINT64_MAX ? 0 : stats_.min_request_processing_time_us) << "\n";
+
+  return m.str();
 }
 
 } // namespace simple_ntpd

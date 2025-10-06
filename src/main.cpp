@@ -69,6 +69,8 @@ void printUsage() {
   std::cout << "  restart              Restart the NTP server" << std::endl;
   std::cout << "  status               Show server status" << std::endl;
   std::cout << "  reload               Reload configuration" << std::endl;
+  std::cout << "  metrics              Print Prometheus metrics" << std::endl;
+  std::cout << "  health               Run health checks" << std::endl;
   std::cout << "  test                 Test server configuration" << std::endl;
   std::cout << "  stats                Show server statistics" << std::endl;
   std::cout << "  connections          List active connections" << std::endl;
@@ -224,6 +226,12 @@ bool parseCommandLine(int argc, char *argv[],
     // We'll perform a one-shot reload after startup in main()
     g_startup_command = command;
     return true;
+  } else if (command == "metrics") {
+    g_startup_command = command;
+    return true;
+  } else if (command == "health") {
+    g_startup_command = command;
+    return true;
   } else if (command == "test") {
     std::cout << "Test command not implemented yet" << std::endl;
     return false;
@@ -323,11 +331,20 @@ int main(int argc, char *argv[]) {
     g_logger->info("Listening on " + config->listen_address + ":" +
                    std::to_string(config->listen_port));
 
-    // If the command is 'reload', perform a one-shot reload and exit
+    // One-shot commands
     if (g_startup_command == "reload") {
       g_logger->info("Performing one-shot configuration reload");
       g_server->reloadConfig();
       g_logger->info("Reload completed; exiting as requested");
+      g_server->stop();
+      return 0;
+    } else if (g_startup_command == "metrics") {
+      std::cout << g_server->exportPrometheusMetrics();
+      g_server->stop();
+      return 0;
+    } else if (g_startup_command == "health") {
+      // Minimal health: running + socket bound check via status text
+      std::cout << g_server->getStatus();
       g_server->stop();
       return 0;
     }

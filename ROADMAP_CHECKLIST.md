@@ -75,21 +75,22 @@
    - [x] YAML parsing (basic)
 
 ### Monitoring & Observability
+### Monitoring & Observability
 - [ ] Enhanced logging with structured output
   - [x] JSON log format
   - [ ] Log rotation
   - [ ] Log aggregation support
-- [ ] Metrics collection (Prometheus format)
-  - [ ] Request/response metrics
-  - [ ] Performance metrics
+- [x] Metrics collection (Prometheus format)
+  - [x] Request/response metrics
+  - [x] Performance metrics (proc time, throughput)
   - [ ] System resource metrics
-- [ ] Health check endpoints
-  - [ ] HTTP health endpoint
+- [x] Health check endpoints
+  - [x] CLI health/status output
   - [ ] NTP-specific health checks
   - [ ] Dependency health checks
-- [ ] Performance monitoring
-  - [ ] Response time tracking
-  - [ ] Throughput monitoring
+- [x] Performance monitoring
+  - [x] Response time tracking (us)
+  - [x] Throughput monitoring
   - [ ] Resource utilization
 
 ## Version 0.3.0 - Security & Reliability 📋 PLANNED
