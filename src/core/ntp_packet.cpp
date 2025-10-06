@@ -1,3 +1,11 @@
+/**
+ * @file ntp_packet.cpp
+ * @brief NTP packet implementation
+ * @author SimpleDaemons
+ * @copyright 2024 SimpleDaemons
+ * @license Apache-2.0
+ */
+
 #include "simple_ntpd/ntp_packet.hpp"
 #include "simple_ntpd/logger.hpp"
 #include <algorithm>
