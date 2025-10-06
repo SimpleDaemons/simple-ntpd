@@ -83,11 +83,11 @@
 - [x] Metrics collection (Prometheus format)
   - [x] Request/response metrics
   - [x] Performance metrics (proc time, throughput)
-  - [ ] System resource metrics
+  - [ ] System resource metrics (planned)
 - [x] Health check endpoints
   - [x] CLI health/status output
-  - [ ] NTP-specific health checks
-  - [ ] Dependency health checks
+  - [ ] NTP-specific health checks (planned)
+  - [ ] Dependency health checks (planned)
 - [x] Performance monitoring
   - [x] Response time tracking (us)
   - [x] Throughput monitoring
