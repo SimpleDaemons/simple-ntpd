@@ -18,12 +18,20 @@
 			"**/.DS_Store": true,
 			"**/*.log": true,
 			"**/*.log.*": true,
-			"**/*.log.*.*": true
+			"**/*.log.*.*": true,
+			"**/build": true,
+			"**/CMakeFiles": true,
+			"**/CMakeCache.txt": true,
+			"**/*.o": true,
+			"**/*.so": true,
+			"**/*.a": true
 		},
 		"files.watcherExclude": {
 			"**/.git/objects/**": true,
 			"**/.git/subtree-cache/**": true,
-			"**/.git/info/exclude/**": true
+			"**/.git/info/exclude/**": true,
+			"**/build/**": true,
+			"**/node_modules/**": true
 		},
 		"files.associations": {
 			"*.json": "jsonc",
@@ -54,13 +62,34 @@
 			"*.jsonl.tar.7z.bz2": "jsonc",
 			"*.jsonl.tar.7z.gz": "jsonc",
 			"*.jsonl.tar.7z.tar": "jsonc",
-			"*.jsonl.tar.7z.tar.gz": "jsonc",
-        },
-        "editor.tabSize": 4,
-        "editor.insertSpaces": false,
-        "editor.detectIndentation": false,
-        "[javascript]": {
-    		"editor.tabSize": 4
-        }
+			"*.jsonl.tar.7z.tar.gz": "jsonc"
+		},
+		"editor.tabSize": 4,
+		"editor.insertSpaces": false,
+		"editor.detectIndentation": false,
+		"[cpp]": {
+			"editor.tabSize": 4,
+			"editor.insertSpaces": false
+		},
+		"[c]": {
+			"editor.tabSize": 4,
+			"editor.insertSpaces": false
+		},
+		"[javascript]": {
+			"editor.tabSize": 4
+		},
+		"[json]": {
+			"editor.tabSize": 2,
+			"editor.insertSpaces": true
+		},
+		"[yaml]": {
+			"editor.tabSize": 2,
+			"editor.insertSpaces": true
+		},
+		"[markdown]": {
+			"editor.tabSize": 2,
+			"editor.insertSpaces": true
+		}
 	}
 }
+
