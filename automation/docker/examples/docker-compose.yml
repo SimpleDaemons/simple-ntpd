@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  simple-ntpd:
+    image: simple-ntpd:latest
+    container_name: simple-ntpd
+    ports:
+      - "123:123/tcp"
+    volumes:
+      - ./config:/etc/simple-ntpd:ro
+      - ./data:/var/lib/simple-ntpd
+      - ./logs:/var/log/simple-ntpd
+    environment:
+      - SIMPLE-NTPD_CONFIG=/etc/simple-ntpd/simple-ntpd.conf
+      - SIMPLE-NTPD_LOG_LEVEL=info
+      - SIMPLE-NTPD_BIND_ADDRESS=0.0.0.0
+      - SIMPLE-NTPD_BIND_PORT=123
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "123"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - simple-ntpd-network
+
+networks:
+  simple-ntpd-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
