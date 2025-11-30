@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "simple_ntpd/logger.hpp"
-#include "simple_ntpd/platform.hpp"
+#include "simple-ntpd/utils/logger.hpp"
+#include "simple-ntpd/utils/platform.hpp"
 #include <chrono>
 #include <memory>
 #include <string>

@@ -6,7 +6,7 @@
  * @license Apache-2.0
  */
 
-#include "simple_ntpd/config_parser.hpp"
+#include "simple-ntpd/config/parser.hpp"
 #include <algorithm>
 #include <cctype>
 #include <fstream>

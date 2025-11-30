@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "simple_ntpd/ntp_config.hpp"
+#include "simple-ntpd/config/config.hpp"
 #include <memory>
 #include <string>
 #include <unordered_map>

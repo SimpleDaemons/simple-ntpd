@@ -593,6 +593,7 @@ endif
 	@echo "  debug            - Build with debug information"
 	@echo "  release          - Build with optimization"
 	@echo "  sanitize         - Build with sanitizers"
+	@echo "  asan             - Build with AddressSanitizer"
 	@echo "  docs             - Build documentation"
 	@echo "  analyze          - Run static analysis"
 	@echo ""
@@ -802,6 +803,13 @@ endif
 debug: dev-build
 release: build
 sanitize: dev-build
+
+asan: $(BUILD_DIR)-dir
+ifeq ($(PLATFORM),windows)
+	@echo "ASAN not configured for Windows in this Makefile"
+else
+	cd $(BUILD_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Debug -DSIMPLE_NTPD_ENABLE_ASAN=ON && $(MAKE) -j$(JOBS)
+endif
 rebuild: clean build
 test-verbose: test
 

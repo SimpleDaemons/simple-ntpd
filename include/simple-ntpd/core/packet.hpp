@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "simple_ntpd/ntp_config.hpp"
-#include "simple_ntpd/platform.hpp"
+#include "simple-ntpd/config/config.hpp"
+#include "simple-ntpd/utils/platform.hpp"
 #include <chrono>
 #include <cstdint>
 #include <string>
