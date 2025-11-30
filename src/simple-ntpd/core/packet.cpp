@@ -6,8 +6,8 @@
  * @license Apache-2.0
  */
 
-#include "simple_ntpd/ntp_packet.hpp"
-#include "simple_ntpd/logger.hpp"
+#include "simple-ntpd/core/packet.hpp"
+#include "simple-ntpd/utils/logger.hpp"
 #include <algorithm>
 #include <cstring>
 #include <iomanip>

@@ -6,9 +6,9 @@
  * @license Apache-2.0
  */
 
-#include "simple_ntpd/logger.hpp"
-#include "simple_ntpd/ntp_config.hpp"
-#include "simple_ntpd/ntp_server.hpp"
+#include "simple-ntpd/utils/logger.hpp"
+#include "simple-ntpd/config/config.hpp"
+#include "simple-ntpd/core/server.hpp"
 #include <csignal>
 #include <iostream>
 #include <memory>

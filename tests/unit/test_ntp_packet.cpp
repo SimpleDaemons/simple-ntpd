@@ -6,7 +6,7 @@
  * @license Apache-2.0
  */
 
-#include "simple_ntpd/ntp_packet.hpp"
+#include "simple-ntpd/core/packet.hpp"
 #include <cassert>
 #include <iostream>
 #include <vector>

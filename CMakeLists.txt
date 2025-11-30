@@ -25,6 +25,7 @@ option(ENABLE_PACKAGING "Enable package generation" ON)
 option(ENABLE_SSL "Enable SSL/TLS support" ON)
 option(ENABLE_JSON "Enable JSON support" ON)
 option(ENABLE_STATIC_LINKING "Enable static linking for self-contained binaries" OFF)
+option(SIMPLE_NTPD_ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 # Find required packages
 find_package(Threads REQUIRED)
@@ -90,6 +91,13 @@ else()
             target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++)
         endif()
     endif()
+endif()
+
+# AddressSanitizer
+if(SIMPLE_NTPD_ENABLE_ASAN AND NOT MSVC)
+    message(STATUS "AddressSanitizer enabled")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
 endif()
 
 # Static linking configuration

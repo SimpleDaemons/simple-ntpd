@@ -6,7 +6,7 @@
  * @license Apache-2.0
  */
 
-#include "simple_ntpd/logger.hpp"
+#include "simple-ntpd/utils/logger.hpp"
 #include <chrono>
 #include <cstring>
 #include <fstream>

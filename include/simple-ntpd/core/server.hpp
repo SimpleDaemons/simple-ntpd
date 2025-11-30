@@ -8,14 +8,14 @@
 
 #pragma once
 
-#include "simple_ntpd/logger.hpp"
-#include "simple_ntpd/ntp_config.hpp"
-#include "simple_ntpd/ntp_connection.hpp"
-#include "simple_ntpd/platform.hpp"
+#include "simple-ntpd/utils/logger.hpp"
+#include "simple-ntpd/config/config.hpp"
+#include "simple-ntpd/core/connection.hpp"
+#include "simple-ntpd/utils/platform.hpp"
 #include <arpa/inet.h>
 #include <atomic>
 #include <functional>
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <mutex>
 #include <netinet/in.h>
@@ -252,7 +252,7 @@ private:
   port_t server_port_;
 
   // Connection management
-  std::map<std::string, std::shared_ptr<NtpConnection>> active_connections_;
+  std::unordered_map<std::string, std::shared_ptr<NtpConnection>> active_connections_;
   mutable std::mutex connections_mutex_;
 
   // Threading

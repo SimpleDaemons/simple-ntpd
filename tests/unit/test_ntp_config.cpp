@@ -6,8 +6,8 @@
  * @license Apache-2.0
  */
 
-#include "simple_ntpd/ntp_config.hpp"
-#include "simple_ntpd/config_parser.hpp"
+#include "simple-ntpd/config/config.hpp"
+#include "simple-ntpd/config/parser.hpp"
 #include <cassert>
 #include <iostream>
 #include <fstream>
