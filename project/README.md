@@ -5,7 +5,13 @@ This directory contains project management, development, and internal documentat
 ## 📋 Document Organization
 
 ### Project Status & Progress
+- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Overall project status, completion metrics, and health indicators
+- **[PROGRESS_REPORT.md](PROGRESS_REPORT.md)** - Detailed progress report with honest assessment of what works and what's pending
 - **[DEVELOPMENT_SUMMARY.md](DEVELOPMENT_SUMMARY.md)** - Development summary and progress tracking
+
+### Implementation & Features
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Summary of recent improvements and feature completions
+- **[FEATURE_AUDIT.md](FEATURE_AUDIT.md)** - Comprehensive audit of implemented vs. stubbed features
 
 ### Planning & Roadmap
 - **[ROADMAP.md](../ROADMAP.md)** - Development roadmap and future plans (in project root for visibility)
