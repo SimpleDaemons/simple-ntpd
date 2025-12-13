@@ -12,8 +12,8 @@ graph TB
 
     subgraph "NTP Server"
         Server[simple-ntpd<br/>Main Process]
-        Config[/etc/simple-ntpd/<br/>Configuration]
-        Logs[/var/log/simple-ntpd/<br/>Log Files]
+        Config[Configuration<br/>/etc/simple-ntpd/]
+        Logs[Log Files<br/>/var/log/simple-ntpd/]
     end
 
     subgraph "Time Sources"
