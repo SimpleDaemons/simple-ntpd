@@ -7,8 +7,8 @@ Welcome to the Simple NTP Daemon documentation. This guide will help you underst
 Simple NTP Daemon is available in three versions, each designed for different deployment scenarios:
 
 ### 🏭 Production Version
-**License:** Apache 2.0  
-**Status:** ✅ In Development  
+**License:** Apache 2.0
+**Status:** ✅ In Development
 **Target:** Small to medium deployments, single-server installations
 
 - Complete NTP protocol implementation
@@ -21,8 +21,8 @@ Simple NTP Daemon is available in three versions, each designed for different de
 **Documentation:** [Production Version Documentation](production/README.md)
 
 ### 🏢 Enterprise Version
-**License:** BSL 1.1 (Business Source License 1.1)  
-**Status:** 📋 Planned  
+**License:** BSL 1.1 (Business Source License 1.1)
+**Status:** 📋 Planned
 **Target:** Large deployments, multi-server environments, enterprise integrations
 
 - All Production Version features included
@@ -38,8 +38,8 @@ Simple NTP Daemon is available in three versions, each designed for different de
 **Documentation:** [Enterprise Version Documentation](enterprise/README.md)
 
 ### 🏛️ Datacenter Version
-**License:** BSL 1.1 (Business Source License 1.1)  
-**Status:** 📋 Planned  
+**License:** BSL 1.1 (Business Source License 1.1)
+**Status:** 📋 Planned
 **Target:** Large-scale datacenter deployments, cloud environments, multi-site operations
 
 - All Enterprise Version features included
@@ -206,7 +206,7 @@ If you find any issues with the documentation or have suggestions for improvemen
 
 ---
 
-**Last Updated:** December 2024  
-**Production Version:** In Development  
-**Enterprise Version:** Planned  
+**Last Updated:** December 2024
+**Production Version:** In Development
+**Enterprise Version:** Planned
 **Datacenter Version:** Planned
