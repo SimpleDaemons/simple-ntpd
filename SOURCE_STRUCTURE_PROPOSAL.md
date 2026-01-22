@@ -44,7 +44,7 @@ simple-ntpd/
 cmake -DBUILD_VERSION=production ..
 make
 
-# Build Enterprise  
+# Build Enterprise
 cmake -DBUILD_VERSION=enterprise ..
 make
 
