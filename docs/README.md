@@ -1,105 +1,212 @@
-# Simple NTP Daemon - Documentation
+# Simple NTP Daemon Documentation
 
-Welcome to the Simple NTP Daemon documentation! This guide will help you understand, install, configure, and use the simple-ntpd server.
+Welcome to the Simple NTP Daemon documentation. This guide will help you understand, configure, and deploy the Simple NTP Daemon effectively.
 
-## 📚 Documentation Index
+## Product Versions
 
-### 🚀 Getting Started
-- **[Quick Start Guide](getting-started/quick-start.md)** - Get up and running in 5 minutes
-- **[Installation Guide](installation/README.md)** - Complete installation instructions for all platforms
-- **[Configuration Guide](configuration/README.md)** - Learn how to configure the daemon
-- **[First Steps](getting-started/first-steps.md)** - Your first NTP server setup
+Simple NTP Daemon is available in three versions, each designed for different deployment scenarios:
 
-### 📖 User Guides
-- **[User Manual](user-guide/README.md)** - Comprehensive user guide
-- **[Configuration Reference](configuration/reference.md)** - Complete configuration options
-- **[Command Line Interface](user-guide/cli.md)** - Command line options and usage
-- **[Logging and Monitoring](user-guide/logging.md)** - Understanding logs and monitoring
-- **[Troubleshooting](troubleshooting/README.md)** - Common issues and solutions
+### 🏭 Production Version
+**License:** Apache 2.0  
+**Status:** ✅ In Development  
+**Target:** Small to medium deployments, single-server installations
 
-### 🏗️ Deployment Guides
-- **[Deployment Overview](deployment/README.md)** - Deployment strategies and considerations
-- **[Production Deployment](deployment/production.md)** - Production-ready deployment guide
-- **[High Availability](deployment/high-availability.md)** - HA and clustering setup
-- **[Security Hardening](deployment/security.md)** - Security best practices
-- **[Performance Tuning](deployment/performance.md)** - Performance optimization guide
+- Complete NTP protocol implementation
+- High-performance time synchronization
+- Basic security features
+- Multi-format configuration (JSON, YAML, INI)
+- Hot reload configuration
+- Cross-platform support
 
-### 🔧 Developer Documentation
-- **[Developer Guide](developer/README.md)** - Getting started with development
-- **[API Reference](developer/api-reference.md)** - Complete API documentation
-- **[Architecture](developer/architecture.md)** - System architecture overview
-- **[Contributing](developer/contributing.md)** - How to contribute to the project
-- **[Testing](developer/testing.md)** - Testing guidelines and procedures
+**Documentation:** [Production Version Documentation](production/README.md)
 
-### 📋 Reference Materials
-- **[Configuration Examples](examples/README.md)** - Real-world configuration examples
-- **[Deployment Examples](examples/deployment.md)** - Deployment configuration examples
-- **[Performance Benchmarks](reference/benchmarks.md)** - Performance data and benchmarks
-- **[Security Considerations](reference/security.md)** - Security analysis and recommendations
-- **[Protocol Compliance](reference/compliance.md)** - RFC 5905 compliance details
+### 🏢 Enterprise Version
+**License:** BSL 1.1 (Business Source License 1.1)  
+**Status:** 📋 Planned  
+**Target:** Large deployments, multi-server environments, enterprise integrations
 
-### 🆘 Support
-- **[FAQ](support/faq.md)** - Frequently asked questions
-- **[Known Issues](support/known-issues.md)** - Known problems and workarounds
-- **[Community Support](support/community.md)** - Getting help from the community
-- **[Reporting Issues](support/reporting-issues.md)** - How to report bugs and issues
+- All Production Version features included
+- Web management interface
+- REST API for management
+- SNMP integration
+- Advanced authentication and authorization (RBAC, ACLs)
+- Advanced security (rate limiting, DDoS protection)
+- High availability and clustering
+- Advanced monitoring and observability
+- Plugin architecture
 
-## 🎯 Quick Navigation
+**Documentation:** [Enterprise Version Documentation](enterprise/README.md)
 
-### For New Users
-Start with the [Quick Start Guide](getting-started/quick-start.md) to get your first NTP server running in minutes.
+### 🏛️ Datacenter Version
+**License:** BSL 1.1 (Business Source License 1.1)  
+**Status:** 📋 Planned  
+**Target:** Large-scale datacenter deployments, cloud environments, multi-site operations
 
-### For System Administrators
-Check out the [Production Deployment](deployment/production.md) guide for enterprise-ready configurations.
+- All Enterprise Version features included
+- Horizontal scaling support
+- Multi-site synchronization
+- Cloud service integrations
+- Advanced performance optimizations
+- Multi-tenant support
+- Advanced analytics
 
-### For Developers
-Begin with the [Developer Guide](developer/README.md) to understand the codebase and start contributing.
-
-### For DevOps Engineers
-See the [Deployment Examples](examples/deployment.md) for containerized and automated deployments.
-
-## 📊 Project Status
-
-- **Current Version**: 0.1.0
-- **Status**: Foundation Release ✅
-- **Next Version**: 0.2.0 (Enhanced Features) 🚧
-- **Documentation Coverage**: 85% Complete
-
-## 🔄 Documentation Updates
-
-This documentation is actively maintained and updated with each release. The latest version always reflects the current stable release.
-
-### Recent Updates
-- **January 2024**: Complete documentation restructure and expansion
-- **January 2024**: Added comprehensive configuration examples
-- **January 2024**: Enhanced deployment guides
-- **January 2024**: Added troubleshooting section
-
-## 🤝 Contributing to Documentation
-
-We welcome contributions to improve the documentation! Please see our [Contributing Guide](developer/contributing.md) for details on how to:
-
-- Report documentation issues
-- Suggest improvements
-- Submit documentation updates
-- Help translate documentation
-
-## 📞 Getting Help
-
-If you can't find what you're looking for in the documentation:
-
-1. **Check the [FAQ](support/faq.md)** for common questions
-2. **Search the [Troubleshooting Guide](troubleshooting/README.md)** for solutions
-3. **Open an issue** on GitHub for documentation problems
-4. **Join the community** discussions for help
-
-## 🔗 External Resources
-
-- **[GitHub Repository](https://github.com/SimpleDaemons/simple-ntpd)** - Source code and issues
-- **[NTP Protocol RFC 5905](https://tools.ietf.org/html/rfc5905)** - Official NTP specification
-- **[NTP Pool Project](https://www.pool.ntp.org/)** - Public NTP server pool
-- **[NTP Security](https://www.eecis.udel.edu/~mills/ntp/html/)** - NTP security information
+**Documentation:** [Datacenter Version Documentation](datacenter/README.md)
 
 ---
 
-*This documentation is part of the Simple NTP Daemon project. For the latest updates, check our [GitHub repository](https://github.com/blburns/simple-ntpd).*
+## Documentation Structure
+
+### 📚 Shared Documentation
+Common documentation applicable to all versions:
+
+- **[Getting Started](shared/getting-started/)** - Installation and quick start guides
+- **[Configuration](shared/configuration/)** - Configuration reference and examples
+- **[Diagrams](shared/diagrams/)** - Architecture and flow diagrams
+- **[Troubleshooting](shared/troubleshooting/)** - Common issues and debugging
+- **[User Guide](shared/user-guide/)** - User documentation
+- **[Examples](shared/examples/)** - Usage examples
+- **[Observability](shared/observability/)** - Monitoring and observability
+
+### 🏭 Production Version Documentation
+- **[Production Guide](production/README.md)** - Complete Production Version documentation
+- **[Installation](production/installation.md)** - Production installation guide
+- **[Configuration](production/configuration.md)** - Production configuration reference
+- **[Deployment](production/deployment.md)** - Production deployment guide
+- **[Security](production/security.md)** - Production security best practices
+- **[Performance](production/performance.md)** - Production performance tuning
+- **[Operations](production/operations.md)** - Production operations guide
+
+### 🏢 Enterprise Version Documentation
+- **[Enterprise Guide](enterprise/README.md)** - Complete Enterprise Version documentation
+- **[Installation](enterprise/installation.md)** - Enterprise installation guide
+- **[Management Interface](enterprise/management.md)** - Web UI and REST API
+- **[High Availability](enterprise/high-availability.md)** - HA setup and configuration
+- **[Integrations](enterprise/integrations.md)** - SNMP and other integrations
+- **[Security](enterprise/security.md)** - Advanced security features
+- **[Operations](enterprise/operations.md)** - Enterprise operations guide
+
+### 🏛️ Datacenter Version Documentation
+- **[Datacenter Guide](datacenter/README.md)** - Complete Datacenter Version documentation
+- **[Installation](datacenter/installation.md)** - Datacenter installation guide
+- **[Multi-Site Setup](datacenter/multi-site.md)** - Multi-site configuration
+- **[Cloud Deployment](datacenter/cloud.md)** - Cloud deployment guides
+- **[Scaling](datacenter/scaling.md)** - Horizontal scaling and load balancing
+- **[Monitoring](datacenter/monitoring.md)** - Advanced monitoring and analytics
+
+### 👨‍💻 Developer Documentation
+Documentation for developers and contributors:
+
+- **[Developer Guide](development/README.md)** - Complete developer documentation
+- **[Build Guide](development/BUILD_GUIDE.md)** - Build commands and reference
+- **[Setup Guide](development/SETUP.md)** - Development environment setup
+
+---
+
+## Quick Start
+
+### Production Version
+1. [Install Simple NTP Daemon](shared/getting-started/installation.md)
+2. [Quick Start Guide](shared/getting-started/quick-start.md)
+3. [Production Configuration](production/configuration.md)
+4. [Production Deployment](production/deployment.md)
+
+### Enterprise Version
+1. [Install Simple NTP Daemon](shared/getting-started/installation.md)
+2. [Enterprise Setup](enterprise/README.md)
+3. [Management Interface](enterprise/management.md)
+4. [High Availability](enterprise/high-availability.md)
+
+### Datacenter Version
+1. [Install Simple NTP Daemon](shared/getting-started/installation.md)
+2. [Datacenter Setup](datacenter/README.md)
+3. [Multi-Site Configuration](datacenter/multi-site.md)
+4. [Scaling Guide](datacenter/scaling.md)
+
+---
+
+## Version Comparison
+
+| Feature | Production | Enterprise | Datacenter |
+|---------|-----------|------------|------------|
+| **License** | Apache 2.0 | BSL 1.1 | BSL 1.1 |
+| **NTP Protocol** | ✅ Complete | ✅ Complete | ✅ Complete |
+| **Time Sync** | ✅ | ✅ | ✅ |
+| **Basic Security** | ✅ | ✅ | ✅ |
+| **Multi-Format Config** | ✅ | ✅ | ✅ |
+| **Hot Reload** | ✅ | ✅ | ✅ |
+| **Web Management** | ❌ | ✅ | ✅ |
+| **REST API** | ❌ | ✅ | ✅ |
+| **SNMP Integration** | ❌ | ✅ | ✅ |
+| **Authentication/RBAC** | ❌ | ✅ | ✅ |
+| **Rate Limiting** | ❌ | ✅ | ✅ |
+| **High Availability** | ❌ | ✅ | ✅ |
+| **Clustering** | ❌ | ✅ | ✅ |
+| **Horizontal Scaling** | ❌ | ❌ | ✅ |
+| **Multi-Site Sync** | ❌ | ❌ | ✅ |
+| **Cloud Integration** | ❌ | ❌ | ✅ |
+| **Plugin System** | ❌ | ✅ | ✅ |
+| **Multi-Tenant** | ❌ | ❌ | ✅ |
+
+---
+
+## Documentation by Topic
+
+### Getting Started
+- [Installation Guide](shared/getting-started/installation.md) - Install on Linux, macOS, Windows
+- [Quick Start](shared/getting-started/quick-start.md) - Get running in minutes
+- [First Steps](shared/getting-started/first-steps.md) - Basic configuration
+
+### Configuration
+- [Configuration Reference](shared/configuration/README.md) - Complete configuration guide
+- [Production Configuration](production/configuration.md) - Production-specific configuration
+- [Enterprise Configuration](enterprise/configuration.md) - Enterprise-specific configuration
+- [Datacenter Configuration](datacenter/configuration.md) - Datacenter-specific configuration
+
+### Deployment
+- [Production Deployment](production/deployment.md) - Production deployment guide
+- [Enterprise Deployment](enterprise/deployment.md) - Enterprise deployment guide
+- [Datacenter Deployment](datacenter/deployment.md) - Datacenter deployment guide
+- [Docker Deployment](shared/deployment/docker.md) - Containerized deployment
+- [High Availability](enterprise/high-availability.md) - HA setup (Enterprise+)
+
+### Operations
+- [Production Operations](production/operations.md) - Production operations guide
+- [Monitoring](shared/observability/README.md) - Monitoring setup
+- [Backup Procedures](shared/deployment/backup-procedures.md) - Backup and restore
+- [Maintenance](shared/deployment/maintenance-procedures.md) - Maintenance procedures
+
+### Security
+- [Production Security](production/security.md) - Production security best practices
+- [Enterprise Security](enterprise/security.md) - Advanced security features
+- [Security Best Practices](shared/user-guide/security-best-practices.md) - General security guide
+
+### Performance
+- [Production Performance](production/performance.md) - Production performance tuning
+- [Enterprise Performance](enterprise/performance.md) - Enterprise performance optimization
+- [Datacenter Performance](datacenter/performance.md) - Datacenter scaling and optimization
+
+### Troubleshooting
+- [Common Issues](shared/troubleshooting/README.md) - Troubleshooting guide
+- [Debugging](shared/troubleshooting/debugging.md) - Debugging techniques
+- [Performance Issues](shared/troubleshooting/performance.md) - Performance troubleshooting
+
+---
+
+## Contributing to Documentation
+
+We welcome contributions to improve this documentation. Please see our [Contributing Guide](../CONTRIBUTING.md) for details on how to contribute.
+
+## Feedback
+
+If you find any issues with the documentation or have suggestions for improvement, please:
+
+1. Open an issue on [GitHub](https://github.com/SimpleDaemons/simple-ntpd/issues)
+2. Submit a pull request with your improvements
+3. Contact us at docs@simpledaemons.com
+
+---
+
+**Last Updated:** December 2024  
+**Production Version:** In Development  
+**Enterprise Version:** Planned  
+**Datacenter Version:** Planned
