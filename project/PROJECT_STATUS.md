@@ -183,3 +183,25 @@ The Simple NTP Daemon project is now **~75% complete** for v0.1.0 with:
 *Last Updated: December 2024*  
 *Project Status: ~75% Complete - Foundation Release Ready*
 
+
+## 📦 Product Versions
+
+The project is organized into three product versions:
+
+### 🏭 Production Version (Apache 2.0)
+- **Status:** ✅ In Development
+- **Target:** Small to medium deployments, single-server installations
+- **Features:** Complete NTP protocol, basic security, multi-format configuration, hot reload
+- **Documentation:** `docs/production/`
+
+### 🏢 Enterprise Version (BSL 1.1)
+- **Status:** 📋 Planned
+- **Target:** Large deployments, multi-server environments, enterprise integrations
+- **Features:** All Production features + Web UI, REST API, SNMP, HA, advanced security
+- **Documentation:** `docs/enterprise/`
+
+### 🏛️ Datacenter Version (BSL 1.1)
+- **Status:** 📋 Planned
+- **Target:** Large-scale datacenter deployments, cloud environments, multi-site operations
+- **Features:** All Enterprise features + Horizontal scaling, multi-site sync, cloud integrations
+- **Documentation:** `docs/datacenter/`
