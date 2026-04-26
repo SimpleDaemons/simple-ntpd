@@ -116,6 +116,12 @@ public:
   std::string exportPrometheusMetrics() const;
 
   /**
+   * @brief Run health checks and return report
+   * @return Health report
+   */
+  std::string runHealthChecks() const;
+
+  /**
    * @brief Reload configuration
    * @return true if successful, false otherwise
    */

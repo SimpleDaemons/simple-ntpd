@@ -12,8 +12,17 @@
 #include "simple-ntpd/core/connection.hpp"
 #include <algorithm>
 #include <cstring>
+#include <fstream>
 #include <sstream>
 #include <thread>
+#if __has_include(<filesystem>)
+#include <filesystem>
+#endif
+#ifndef _WIN32
+#include <fcntl.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+#endif
 #ifndef _WIN32
 #include <syslog.h>
 #endif
@@ -181,6 +190,14 @@ bool NtpServer::initializeSocket() {
                      std::string(std::strerror(errno)));
   }
 
+#ifndef _WIN32
+  int flags = fcntl(server_socket_, F_GETFL, 0);
+  if (flags < 0 || fcntl(server_socket_, F_SETFL, flags | O_NONBLOCK) < 0) {
+    logger_->warning("Failed to set non-blocking mode: " +
+                     std::string(std::strerror(errno)));
+  }
+#endif
+
   return true;
 }
 
@@ -222,6 +239,7 @@ void NtpServer::configWatcherLoop() {
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
       auto current_sys = std::chrono::clock_cast<std::chrono::system_clock>(current_write);
 #else
+      (void)current_write;
       auto current_sys = std::chrono::system_clock::now(); // Fallback: trigger reload only once
 #endif
       if (config_last_write_time_.time_since_epoch().count() == 0) {
@@ -354,8 +372,32 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
 
   // Process the packet
   if (connection->handlePacket(data)) {
+    NtpPacket request_packet;
+    if (!request_packet.parseFromData(data)) {
+      logger_->warning("Failed to parse packet for response generation from " +
+                       std::string(client_ip));
+      stats_.total_errors++;
+      return;
+    }
+
+    NtpPacket response_packet = NtpPacket::createServerResponse(
+        request_packet, config_->stratum, config_->reference_id);
+    auto response_data = response_packet.serializeToData();
+    ssize_t bytes_sent = sendto(
+        server_socket_, response_data.data(), response_data.size(), 0,
+        reinterpret_cast<const struct sockaddr *>(&client_addr),
+        sizeof(client_addr));
+    if (bytes_sent < 0) {
+      logger_->error("Failed to send NTP response to " + std::string(client_ip) +
+                     ":" + std::to_string(client_port) + ": " +
+                     std::string(std::strerror(errno)));
+      stats_.total_errors++;
+      return;
+    }
+
     stats_.total_requests++;
     stats_.total_bytes_transferred += data.size();
+    stats_.total_responses++;
   } else {
     stats_.total_errors++;
   }
@@ -486,7 +528,75 @@ std::string NtpServer::exportPrometheusMetrics() const {
   m << "simple_ntpd_request_proc_time_us_max " << stats_.max_request_processing_time_us << "\n";
   m << "simple_ntpd_request_proc_time_us_min " << (stats_.min_request_processing_time_us == UINT64_MAX ? 0 : stats_.min_request_processing_time_us) << "\n";
 
+  auto uptime = std::chrono::steady_clock::now() - stats_.start_time;
+  auto uptime_seconds = std::chrono::duration_cast<std::chrono::seconds>(uptime).count();
+  m << "# HELP simple_ntpd_uptime_seconds Server uptime in seconds\n";
+  m << "# TYPE simple_ntpd_uptime_seconds gauge\n";
+  m << "simple_ntpd_uptime_seconds " << uptime_seconds << "\n";
+
+#ifndef _WIN32
+  struct rusage usage {};
+  if (getrusage(RUSAGE_SELF, &usage) == 0) {
+    const long rss_bytes = usage.ru_maxrss * 1024L;
+    m << "# HELP simple_ntpd_process_max_rss_bytes Peak RSS in bytes\n";
+    m << "# TYPE simple_ntpd_process_max_rss_bytes gauge\n";
+    m << "simple_ntpd_process_max_rss_bytes " << rss_bytes << "\n";
+    m << "# HELP simple_ntpd_process_user_cpu_seconds Total user CPU time\n";
+    m << "# TYPE simple_ntpd_process_user_cpu_seconds counter\n";
+    m << "simple_ntpd_process_user_cpu_seconds "
+      << (usage.ru_utime.tv_sec + (usage.ru_utime.tv_usec / 1000000.0)) << "\n";
+    m << "# HELP simple_ntpd_process_system_cpu_seconds Total system CPU time\n";
+    m << "# TYPE simple_ntpd_process_system_cpu_seconds counter\n";
+    m << "simple_ntpd_process_system_cpu_seconds "
+      << (usage.ru_stime.tv_sec + (usage.ru_stime.tv_usec / 1000000.0)) << "\n";
+  }
+#endif
+
   return m.str();
+}
+
+std::string NtpServer::runHealthChecks() const {
+  std::stringstream ss;
+  bool healthy = true;
+
+  ss << "Health Check Report\n";
+  if (!running_) {
+    healthy = false;
+  }
+  ss << "running: " << (running_ ? "true" : "false") << "\n";
+  ss << "socket_bound: " << (server_socket_ != INVALID_SOCKET ? "true" : "false") << "\n";
+  ss << "active_connections: " << stats_.active_connections << "\n";
+  ss << "total_errors: " << stats_.total_errors << "\n";
+  ss << "config_loaded: " << (config_ && !config_->lastConfigFile().empty() ? "true" : "false") << "\n";
+
+  if (config_ && config_->enable_leap_second_handling) {
+#if __has_include(<filesystem>)
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const bool leap_exists = fs::exists(config_->leap_second_file, ec);
+    ss << "leap_second_file_present: " << (leap_exists ? "true" : "false") << "\n";
+    if (!leap_exists) {
+      healthy = false;
+      ss << "warning: leap second handling enabled but leap second file missing\n";
+    }
+#else
+    std::ifstream leap_file(config_->leap_second_file);
+    const bool leap_exists = leap_file.good();
+    ss << "leap_second_file_present: " << (leap_exists ? "true" : "false") << "\n";
+    if (!leap_exists) {
+      healthy = false;
+      ss << "warning: leap second handling enabled but leap second file missing\n";
+    }
+#endif
+  }
+
+  if (stats_.total_requests > 0 && stats_.total_errors > (stats_.total_requests / 2)) {
+    healthy = false;
+    ss << "warning: high error ratio detected\n";
+  }
+
+  ss << "overall_status: " << (healthy ? "healthy" : "degraded") << "\n";
+  return ss.str();
 }
 
 } // namespace simple_ntpd

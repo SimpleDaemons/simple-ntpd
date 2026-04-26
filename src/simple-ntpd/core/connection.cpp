@@ -108,20 +108,8 @@ bool NtpConnection::handlePacket(const std::vector<uint8_t> &data) {
     return false;
   }
 
-  // Create server response
-  auto response = NtpPacket::createServerResponse(
-      packet, NtpStratum::SECONDARY_REFERENCE, "LOCL");
-
-  // Send the response
-  auto response_data = response.serializeToData();
-  if (!sendResponse(response)) {
-    logger_->error("Failed to send response to " + client_address_);
-    return false;
-  }
-
   logger_->debug(
-      "Processed NTP request from " + client_address_ +
-      " (stratum: " + std::to_string(static_cast<int>(response.stratum)) + ")");
+      "Validated NTP request from " + client_address_);
 
   // Update statistics
   stats_.packets_received++;

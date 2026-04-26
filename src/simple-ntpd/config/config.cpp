@@ -9,8 +9,10 @@
 #include "simple-ntpd/config/config.hpp"
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
+#include <type_traits>
 
 namespace simple_ntpd {
 
@@ -60,6 +62,7 @@ bool NtpConfig::loadFromFile(const std::string &config_file) {
   bool ok = parseConfigFile(config_file);
   if (ok) {
     setLastConfigFile(config_file);
+    applyEnvironmentOverrides();
   }
   return ok;
 }
@@ -79,36 +82,83 @@ bool NtpConfig::loadFromCommandLine(int argc, char *argv[]) {
     }
   }
 
+  applyEnvironmentOverrides();
   return true;
 }
 
 bool NtpConfig::validate() const {
-  // Validate listen port
+  std::vector<std::string> errors;
+  return validateDetailed(errors);
+}
+
+bool NtpConfig::validateDetailed(std::vector<std::string> &errors) const {
+  errors.clear();
+
   if (listen_port < 1 || listen_port > 65535) {
-    return false;
+    errors.push_back("listen_port must be in range 1-65535");
   }
 
-  // Validate stratum
   if (static_cast<int>(stratum) < 0 || static_cast<int>(stratum) > 15) {
-    return false;
+    errors.push_back("stratum must be in range 0-15");
   }
 
-  // Validate worker threads
   if (worker_threads < 1 || worker_threads > 64) {
-    return false;
+    errors.push_back("worker_threads must be in range 1-64");
   }
 
-  // Validate max connections
   if (max_connections < 1 || max_connections > 100000) {
-    return false;
+    errors.push_back("max_connections must be in range 1-100000");
   }
 
-  // Validate max packet size
   if (max_packet_size < 48 || max_packet_size > 8192) {
-    return false;
+    errors.push_back("max_packet_size must be in range 48-8192");
   }
 
-  return true;
+  if (sync_interval.count() < 1 || sync_interval.count() > 86400) {
+    errors.push_back("sync_interval must be in range 1-86400 seconds");
+  }
+
+  if (timeout.count() < 10 || timeout.count() > 60000) {
+    errors.push_back("timeout must be in range 10-60000 milliseconds");
+  }
+
+  if (stats_interval.count() < 1 || stats_interval.count() > 3600) {
+    errors.push_back("stats_interval must be in range 1-3600 seconds");
+  }
+
+  if (reference_id.size() != 4) {
+    errors.push_back("reference_id must be exactly 4 characters");
+  }
+
+  if (log_max_size_bytes > 0 && log_max_size_bytes < 1024) {
+    errors.push_back("log_max_size_bytes must be 0 or >= 1024");
+  }
+
+  if (log_max_files < 1 || log_max_files > 1000) {
+    errors.push_back("log_max_files must be in range 1-1000");
+  }
+
+  if (enable_authentication && authentication_key.empty()) {
+    errors.push_back("authentication_key is required when enable_authentication=true");
+  }
+
+  if (!enable_authentication && !authentication_key.empty()) {
+    errors.push_back("authentication_key set while enable_authentication=false");
+  }
+
+  if (enable_leap_second_handling && leap_second_file.empty()) {
+    errors.push_back("leap_second_file is required when enable_leap_second_handling=true");
+  }
+
+  if (enable_statistics && stats_interval.count() <= 0) {
+    errors.push_back("stats_interval must be > 0 when enable_statistics=true");
+  }
+
+  if (restrict_queries && allowed_clients.empty()) {
+    errors.push_back("allowed_clients must be set when restrict_queries=true");
+  }
+
+  return errors.empty();
 }
 
 std::string NtpConfig::toString() const {
@@ -143,12 +193,7 @@ bool NtpConfig::parseConfigFile(const std::string &config_file) {
   }
 
   std::string line;
-  std::string current_section;
-  int line_number = 0;
-
   while (std::getline(file, line)) {
-    line_number++;
-
     // Skip empty lines and comments
     if (line.empty() || line[0] == '#' || line[0] == ';') {
       continue;
@@ -160,7 +205,6 @@ bool NtpConfig::parseConfigFile(const std::string &config_file) {
 
     // Check for section headers [section]
     if (line[0] == '[' && line[line.length() - 1] == ']') {
-      current_section = line.substr(1, line.length() - 2);
       continue;
     }
 
@@ -353,6 +397,90 @@ bool NtpConfig::parseCommandLineArg(const std::string &key,
   }
 
   return true;
+}
+
+void NtpConfig::applyEnvironmentOverrides() {
+  auto apply_bool = [](const char *name, bool &dst) {
+    const char *v = std::getenv(name);
+    if (!v) {
+      return;
+    }
+    std::string s(v);
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    dst = (s == "1" || s == "true" || s == "yes" || s == "on");
+  };
+  auto apply_int = [](const char *name, auto &dst) {
+    const char *v = std::getenv(name);
+    if (!v) {
+      return;
+    }
+    try {
+      using T = std::decay_t<decltype(dst)>;
+      if constexpr (std::is_enum_v<T>) {
+        dst = static_cast<T>(std::stoi(v));
+      } else if constexpr (std::is_unsigned_v<T>) {
+        dst = static_cast<T>(std::stoull(v));
+      } else {
+        dst = static_cast<T>(std::stoll(v));
+      }
+    } catch (const std::exception &) {
+      // ignore invalid overrides
+    }
+  };
+  auto apply_string = [](const char *name, std::string &dst) {
+    const char *v = std::getenv(name);
+    if (v) {
+      dst = v;
+    }
+  };
+
+  apply_string("SIMPLE_NTPD_LISTEN_ADDRESS", listen_address);
+  apply_int("SIMPLE_NTPD_LISTEN_PORT", listen_port);
+  apply_int("SIMPLE_NTPD_MAX_CONNECTIONS", max_connections);
+  apply_int("SIMPLE_NTPD_WORKER_THREADS", worker_threads);
+  apply_int("SIMPLE_NTPD_MAX_PACKET_SIZE", max_packet_size);
+  apply_string("SIMPLE_NTPD_REFERENCE_ID", reference_id);
+  apply_string("SIMPLE_NTPD_REFERENCE_CLOCK", reference_clock);
+  apply_bool("SIMPLE_NTPD_ENABLE_STATISTICS", enable_statistics);
+  {
+    const char *v = std::getenv("SIMPLE_NTPD_STATS_INTERVAL_SEC");
+    if (v) {
+      try {
+        stats_interval = std::chrono::seconds(std::stoll(v));
+      } catch (const std::exception &) {
+      }
+    }
+  }
+  {
+    const char *v = std::getenv("SIMPLE_NTPD_SYNC_INTERVAL_SEC");
+    if (v) {
+      try {
+        sync_interval = std::chrono::seconds(std::stoll(v));
+      } catch (const std::exception &) {
+      }
+    }
+  }
+  {
+    const char *v = std::getenv("SIMPLE_NTPD_TIMEOUT_MS");
+    if (v) {
+      try {
+        timeout = std::chrono::milliseconds(std::stoll(v));
+      } catch (const std::exception &) {
+      }
+    }
+  }
+  apply_string("SIMPLE_NTPD_LOG_FILE", log_file);
+  apply_int("SIMPLE_NTPD_LOG_LEVEL", log_level);
+  apply_bool("SIMPLE_NTPD_LOG_JSON", log_json);
+  apply_int("SIMPLE_NTPD_LOG_MAX_SIZE_BYTES", log_max_size_bytes);
+  apply_int("SIMPLE_NTPD_LOG_MAX_FILES", log_max_files);
+  apply_bool("SIMPLE_NTPD_ENABLE_SYSLOG", enable_syslog);
+  apply_bool("SIMPLE_NTPD_ENABLE_CONSOLE_LOGGING", enable_console_logging);
+  apply_bool("SIMPLE_NTPD_ENABLE_AUTHENTICATION", enable_authentication);
+  apply_string("SIMPLE_NTPD_AUTH_KEY", authentication_key);
+  apply_bool("SIMPLE_NTPD_RESTRICT_QUERIES", restrict_queries);
+  apply_bool("SIMPLE_NTPD_ENABLE_LEAP_SECOND_HANDLING", enable_leap_second_handling);
+  apply_string("SIMPLE_NTPD_LEAP_SECOND_FILE", leap_second_file);
 }
 
 } // namespace simple_ntpd

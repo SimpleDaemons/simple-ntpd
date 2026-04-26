@@ -2,7 +2,24 @@
 
 All notable changes to the Simple NTP Daemon project will be documented in this file.
 
-## [Unreleased] - 2025-09-01
+## [Unreleased]
+
+## [0.2.0] - 2026-04-25
+
+### Added
+- Config environment variable overrides (`SIMPLE_NTPD_*`) for runtime-safe deployment customization.
+- Detailed configuration validation with schema/range/dependency checks.
+- Health check report output and expanded Prometheus metrics (including process resource metrics).
+- Configuration templates for development, production, and high-security deployments.
+
+### Changed
+- Upgraded release metadata and CLI-reported version to `v0.2.0`.
+- Improved server packet handling path and non-blocking runtime behavior.
+- Updated roadmap/status documentation to mark 0.2.0 completion and shift focus to 0.3.0.
+
+### Fixed
+- Build target linkage so `simple-ntpd` reliably links with the production entrypoint.
+- Build warnings caused by unused local variables in parser/config/server code paths.
 
 ### Added
 - **Modular Help System**: Completely reorganized the Makefile help system for better usability

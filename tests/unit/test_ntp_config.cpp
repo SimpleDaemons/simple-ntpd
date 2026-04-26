@@ -9,6 +9,7 @@
 #include "simple-ntpd/config/config.hpp"
 #include "simple-ntpd/config/parser.hpp"
 #include <cassert>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -39,6 +40,12 @@ public:
 
     total++; if (testConfigFactory()) { passed++; std::cout << "✓ testConfigFactory passed" << std::endl; }
     else { std::cout << "✗ testConfigFactory failed" << std::endl; }
+
+    total++; if (testDetailedValidation()) { passed++; std::cout << "✓ testDetailedValidation passed" << std::endl; }
+    else { std::cout << "✗ testDetailedValidation failed" << std::endl; }
+
+    total++; if (testEnvironmentOverrides()) { passed++; std::cout << "✓ testEnvironmentOverrides passed" << std::endl; }
+    else { std::cout << "✗ testEnvironmentOverrides failed" << std::endl; }
 
     std::cout << "\nConfig Test Results: " << passed << "/" << total << " tests passed" << std::endl;
     return (passed == total) ? 0 : 1;
@@ -204,6 +211,49 @@ enable_console_logging: true
       auto fileParser = ConfigParserFactory::createParserFromFile("test.ini");
       assert(fileParser != nullptr);
 
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+
+  static bool testDetailedValidation() {
+    try {
+      NtpConfig config;
+      config.enable_authentication = true;
+      config.authentication_key.clear();
+
+      std::vector<std::string> errors;
+      assert(!config.validateDetailed(errors));
+      assert(!errors.empty());
+
+      config.authentication_key = "secret";
+      errors.clear();
+      assert(config.validateDetailed(errors));
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+
+  static bool testEnvironmentOverrides() {
+    try {
+      setenv("SIMPLE_NTPD_LISTEN_PORT", "9123", 1);
+      setenv("SIMPLE_NTPD_LOG_JSON", "true", 1);
+      setenv("SIMPLE_NTPD_WORKER_THREADS", "6", 1);
+      setenv("SIMPLE_NTPD_REFERENCE_ID", "TEST", 1);
+
+      NtpConfig config;
+      assert(config.loadFromCommandLine(0, nullptr));
+      assert(config.listen_port == 9123);
+      assert(config.log_json);
+      assert(config.worker_threads == 6);
+      assert(config.reference_id == "TEST");
+
+      unsetenv("SIMPLE_NTPD_LISTEN_PORT");
+      unsetenv("SIMPLE_NTPD_LOG_JSON");
+      unsetenv("SIMPLE_NTPD_WORKER_THREADS");
+      unsetenv("SIMPLE_NTPD_REFERENCE_ID");
       return true;
     } catch (...) {
       return false;

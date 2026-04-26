@@ -56,6 +56,13 @@ public:
   bool validate() const;
 
   /**
+   * @brief Validate configuration and collect detailed errors
+   * @param errors Output validation errors
+   * @return true if valid, false otherwise
+   */
+  bool validateDetailed(std::vector<std::string> &errors) const;
+
+  /**
    * @brief Get configuration as string for logging
    * @return Configuration summary string
    */
@@ -124,6 +131,11 @@ public:
    * @brief Set default values
    */
   void setDefaults();
+
+  /**
+   * @brief Apply SIMPLE_NTPD_* environment variable overrides
+   */
+  void applyEnvironmentOverrides();
 
   /**
    * @brief Parse configuration file

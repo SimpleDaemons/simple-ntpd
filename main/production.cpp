@@ -88,7 +88,7 @@ void printUsage() {
  * @brief Print version information
  */
 void printVersion() {
-  std::cout << "simple-ntpd v0.1.0" << std::endl;
+  std::cout << "simple-ntpd v0.2.0" << std::endl;
   std::cout << "Simple NTP Daemon for Linux, macOS, and Windows" << std::endl;
   std::cout << "Copyright (c) 2024 BLBurns <contact@blburns.com>" << std::endl;
   std::cout << "Licensed under Apache License 2.0" << std::endl;
@@ -312,7 +312,7 @@ int main(int argc, char *argv[]) {
   g_logger->setLogRotation(config->log_max_size_bytes, config->log_max_files);
 
     // Log startup
-    g_logger->info("Starting simple-ntpd v0.1.0");
+    g_logger->info("Starting simple-ntpd v0.2.0");
     g_logger->info("Configuration: " + config->toString());
 
     // Initialize signal handlers
@@ -344,8 +344,7 @@ int main(int argc, char *argv[]) {
       g_server->stop();
       return 0;
     } else if (g_startup_command == "health") {
-      // Minimal health: running + socket bound check via status text
-      std::cout << g_server->getStatus();
+      std::cout << g_server->runHealthChecks();
       g_server->stop();
       return 0;
     }

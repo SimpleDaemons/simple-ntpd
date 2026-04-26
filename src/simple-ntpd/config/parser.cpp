@@ -189,10 +189,8 @@ public:
   bool parseString(const std::string &content, NtpConfig &config) override {
     std::istringstream stream(content);
     std::string line;
-    int line_number = 0;
 
     while (std::getline(stream, line)) {
-      line_number++;
       line = trim(line);
 
       // Skip empty lines and comments

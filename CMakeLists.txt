@@ -3,7 +3,7 @@
 # Copyright 2024 SimpleDaemons
 
 cmake_minimum_required(VERSION 3.16)
-project(simple-ntpd VERSION 0.1.0 LANGUAGES CXX)
+project(simple-ntpd VERSION 0.2.0 LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -43,14 +43,22 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Source files
-file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.c")
+# Only build the canonical source tree under src/simple-ntpd to avoid
+# duplicate-symbol collisions with legacy mirrored sources in src/core.
+file(GLOB_RECURSE LIB_SOURCES
+    "src/simple-ntpd/*.cpp"
+    "src/simple-ntpd/*.c"
+)
 file(GLOB_RECURSE HEADERS "include/*.hpp" "include/*.h")
+set(APP_MAIN "main/production.cpp")
 
 # Create library for linking with tests
-add_library(${PROJECT_NAME}_lib STATIC ${SOURCES} ${HEADERS})
+add_library(${PROJECT_NAME}_lib STATIC ${LIB_SOURCES} ${HEADERS})
 
 # Create executable
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME} ${APP_MAIN})
+
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
