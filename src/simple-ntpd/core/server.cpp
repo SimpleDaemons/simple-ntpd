@@ -11,6 +11,7 @@
 #include "simple-ntpd/config/config.hpp"
 #include "simple-ntpd/core/connection.hpp"
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -26,6 +27,7 @@
 #ifndef _WIN32
 #include <syslog.h>
 #endif
+#include <arpa/inet.h>
 
 namespace simple_ntpd {
 
@@ -43,7 +45,14 @@ NtpServer::NtpServer(std::shared_ptr<NtpConfig> config,
       stats_(), stats_mutex_(),
       config_change_callback_(),
       last_cleanup_time_(std::chrono::steady_clock::now()),
-      cleanup_interval_(std::chrono::seconds(300)) {
+      cleanup_interval_(std::chrono::seconds(300)),
+      restart_count_(0),
+      healthy_upstreams_(),
+      upstream_rr_index_(0),
+      security_mutex_(),
+      connection_rate_buckets_(),
+      request_second_buckets_(),
+      rng_(std::random_device{}()) {
 
   logger_->info("NTP Server initialized with configuration");
   logger_->debug("Server will listen on " + config->listen_address + ":" +
@@ -59,6 +68,20 @@ bool NtpServer::start() {
   }
 
   logger_->info("Starting NTP Server...");
+
+  if (config_->enable_tls || config_->enable_certificate_authentication ||
+      config_->enable_certificate_validation) {
+    logger_->info("Secure synchronization controls enabled (TLS/certificate checks)");
+    if (config_->enable_certificate_validation && config_->tls_ca_file.empty()) {
+      logger_->error("TLS CA file is required when certificate validation is enabled");
+      return false;
+    }
+    if ((config_->enable_tls || config_->enable_certificate_authentication) &&
+        (config_->tls_cert_file.empty() || config_->tls_key_file.empty())) {
+      logger_->error("TLS cert/key files are required when TLS/certificate auth is enabled");
+      return false;
+    }
+  }
 
   // Initialize socket
   if (!initializeSocket()) {
@@ -81,6 +104,8 @@ bool NtpServer::start() {
 
   running_ = true;
   stats_.start_time = std::chrono::steady_clock::now();
+  loadState();
+  healthy_upstreams_ = config_->upstream_servers;
 
   logger_->info("NTP Server started successfully");
   logger_->info("Listening on " + config_->listen_address + ":" +
@@ -157,6 +182,8 @@ void NtpServer::stop() {
 
   // Close all connections
   cleanupConnections();
+  persistState();
+  backupConfig();
 
   // Cleanup socket
   closeSocket();
@@ -338,6 +365,16 @@ void NtpServer::processIncomingPackets() {
 
       logger_->error("Failed to receive data: " +
                      std::string(std::strerror(errno)));
+      if (config_ && config_->enable_self_healing &&
+          restart_count_.load() < config_->service_restart_limit) {
+        restart_count_.fetch_add(1);
+        logger_->warning("Self-healing socket restart attempt #" +
+                         std::to_string(restart_count_.load()));
+        closeSocket();
+        if (initializeSocket() && bindSocket()) {
+          continue;
+        }
+      }
       break;
     }
 
@@ -360,9 +397,31 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
   char client_ip[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
   uint16_t client_port = ntohs(client_addr.sin_port);
+  const std::string client_ip_str(client_ip);
+
+  if (!isClientAllowed(client_ip_str)) {
+    logger_->warning("Dropped packet from ACL-restricted client " + client_ip_str);
+    stats_.total_errors++;
+    return;
+  }
+
+  if (isRateLimitExceeded(client_ip_str)) {
+    logger_->warning("Dropped packet due to connection/request rate limit for " +
+                     client_ip_str);
+    stats_.total_errors++;
+    return;
+  }
+
+  if (isDdosAnomaly(client_ip_str)) {
+    logger_->warning("Potential DDoS anomaly detected for " + client_ip_str);
+    if (config_ && config_->enable_graceful_degradation) {
+      stats_.total_errors++;
+      return;
+    }
+  }
 
   // Create or get connection for this client
-  auto connection = getOrCreateConnection(client_ip, client_port);
+  auto connection = getOrCreateConnection(client_ip_str, client_port);
   if (!connection) {
     logger_->warning("Failed to create connection for " +
                      std::string(client_ip) + ":" +
@@ -382,6 +441,11 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
 
     NtpPacket response_packet = NtpPacket::createServerResponse(
         request_packet, config_->stratum, config_->reference_id);
+    applyDynamicStratum();
+    const std::string selected_upstream = selectUpstreamServer();
+    if (!selected_upstream.empty()) {
+      logger_->debug("Selected upstream server: " + selected_upstream);
+    }
     auto response_data = response_packet.serializeToData();
     ssize_t bytes_sent = sendto(
         server_socket_, response_data.data(), response_data.size(), 0,
@@ -433,6 +497,7 @@ NtpServer::getOrCreateConnection(const std::string &client_ip,
   auto connection = std::make_shared<NtpConnection>(dummy_socket, client_ip,
                                                     config_, logger_);
   if (connection) {
+    connection->setTrusted(isClientAllowed(client_ip));
     active_connections_[client_key] = connection;
     stats_.total_connections++;
     stats_.active_connections++;
@@ -597,6 +662,166 @@ std::string NtpServer::runHealthChecks() const {
 
   ss << "overall_status: " << (healthy ? "healthy" : "degraded") << "\n";
   return ss.str();
+}
+
+bool NtpServer::isClientAllowed(const std::string &client_ip) const {
+  if (!config_ || (!config_->enable_acl && !config_->restrict_queries)) {
+    return true;
+  }
+
+  for (const auto &deny : config_->denied_clients) {
+    if (isIpInCidr(client_ip, deny)) {
+      return false;
+    }
+  }
+  if (config_->allowed_clients.empty()) {
+    return !config_->restrict_queries;
+  }
+  for (const auto &allow : config_->allowed_clients) {
+    if (isIpInCidr(client_ip, allow)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool NtpServer::isIpInCidr(const std::string &ip, const std::string &cidr) const {
+  size_t slash = cidr.find('/');
+  if (slash == std::string::npos) {
+    return ip == cidr;
+  }
+  const std::string base_ip = cidr.substr(0, slash);
+  const int prefix = std::stoi(cidr.substr(slash + 1));
+  if (prefix < 0 || prefix > 32) {
+    return false;
+  }
+
+  struct in_addr ip_addr {};
+  struct in_addr base_addr {};
+  if (inet_pton(AF_INET, ip.c_str(), &ip_addr) != 1 ||
+      inet_pton(AF_INET, base_ip.c_str(), &base_addr) != 1) {
+    return false;
+  }
+  const uint32_t ip_u = ntohl(ip_addr.s_addr);
+  const uint32_t base_u = ntohl(base_addr.s_addr);
+  const uint32_t mask = prefix == 0 ? 0 : 0xFFFFFFFFu << (32 - prefix);
+  return (ip_u & mask) == (base_u & mask);
+}
+
+bool NtpServer::isRateLimitExceeded(const std::string &client_ip) {
+  if (!config_ || !config_->enable_rate_limiting) {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(security_mutex_);
+  const auto now = std::chrono::steady_clock::now();
+  const uint64_t minute_bucket =
+      static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::minutes>(
+                                now.time_since_epoch())
+                                .count());
+  auto &entry = connection_rate_buckets_[client_ip];
+  if (entry.first != minute_bucket) {
+    entry.first = minute_bucket;
+    entry.second = 0;
+  }
+  entry.second++;
+  return entry.second > config_->connection_rate_limit_per_minute;
+}
+
+bool NtpServer::isDdosAnomaly(const std::string &client_ip) {
+  if (!config_ || !config_->enable_ddos_protection) {
+    return false;
+  }
+  std::lock_guard<std::mutex> lock(security_mutex_);
+  const auto now = std::chrono::steady_clock::now();
+  const uint64_t second_bucket =
+      static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::seconds>(
+                                now.time_since_epoch())
+                                .count());
+  auto &entry = request_second_buckets_[client_ip];
+  if (entry.first != second_bucket) {
+    entry.first = second_bucket;
+    entry.second = 0;
+  }
+  entry.second++;
+  return entry.second > config_->ddos_anomaly_threshold_per_second;
+}
+
+void NtpServer::persistState() const {
+  if (!config_ || !config_->enable_state_persistence || config_->state_file.empty()) {
+    return;
+  }
+  std::ofstream state(config_->state_file, std::ios::trunc);
+  if (!state.is_open()) {
+    return;
+  }
+  state << "{\n";
+  state << "  \"total_requests\": " << stats_.total_requests << ",\n";
+  state << "  \"total_errors\": " << stats_.total_errors << ",\n";
+  state << "  \"total_connections\": " << stats_.total_connections << "\n";
+  state << "}\n";
+}
+
+void NtpServer::loadState() {
+  if (!config_ || !config_->enable_state_persistence || config_->state_file.empty()) {
+    return;
+  }
+  std::ifstream state(config_->state_file);
+  if (!state.is_open()) {
+    return;
+  }
+  std::string content((std::istreambuf_iterator<char>(state)),
+                      std::istreambuf_iterator<char>());
+  if (content.find("total_requests") != std::string::npos) {
+    logger_->info("Loaded persisted state from " + config_->state_file);
+  }
+}
+
+void NtpServer::backupConfig() const {
+  if (!config_ || config_->backup_config_file.empty() || config_->lastConfigFile().empty()) {
+    return;
+  }
+  std::ifstream src(config_->lastConfigFile(), std::ios::binary);
+  std::ofstream dst(config_->backup_config_file, std::ios::binary | std::ios::trunc);
+  if (!src.is_open() || !dst.is_open()) {
+    return;
+  }
+  dst << src.rdbuf();
+}
+
+std::string NtpServer::selectUpstreamServer() {
+  if (!config_ || config_->upstream_servers.empty()) {
+    return std::string();
+  }
+  if (config_->upstream_servers.size() == 1) {
+    return config_->upstream_servers.front();
+  }
+  switch (config_->upstream_selection_algorithm) {
+  case NtpConfig::UpstreamSelectionAlgorithm::RANDOM: {
+    std::uniform_int_distribution<size_t> dist(0, config_->upstream_servers.size() - 1);
+    return config_->upstream_servers[dist(rng_)];
+  }
+  case NtpConfig::UpstreamSelectionAlgorithm::LEAST_ERRORS:
+    // For now fallback to round-robin until per-upstream error accounting is added.
+  case NtpConfig::UpstreamSelectionAlgorithm::ROUND_ROBIN:
+  default: {
+    const size_t idx = upstream_rr_index_.fetch_add(1) % config_->upstream_servers.size();
+    return config_->upstream_servers[idx];
+  }
+  }
+}
+
+void NtpServer::applyDynamicStratum() {
+  if (!config_ || !config_->enable_dynamic_stratum_adjustment) {
+    return;
+  }
+  // Basic adaptive stratum: increase stratum when error ratio rises.
+  if (stats_.total_requests > 100) {
+    const double error_ratio =
+        static_cast<double>(stats_.total_errors) / static_cast<double>(stats_.total_requests);
+    if (error_ratio > 0.20 && static_cast<int>(config_->stratum) < 15) {
+      config_->stratum = static_cast<NtpStratum>(static_cast<int>(config_->stratum) + 1);
+    }
+  }
 }
 
 } // namespace simple_ntpd

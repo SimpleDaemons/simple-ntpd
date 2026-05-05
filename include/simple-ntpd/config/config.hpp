@@ -11,7 +11,9 @@
 #include "simple-ntpd/utils/logger.hpp"
 #include "simple-ntpd/utils/platform.hpp"
 #include <chrono>
+#include <cstdint>
 #include <memory>
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -24,6 +26,24 @@ namespace simple_ntpd {
  */
 class NtpConfig {
 public:
+  enum class AuthAlgorithm {
+    NONE = 0,
+    MD5 = 1,
+    SHA1 = 2,
+    SHA256 = 3,
+  };
+
+  enum class UpstreamSelectionAlgorithm {
+    ROUND_ROBIN = 0,
+    RANDOM = 1,
+    LEAST_ERRORS = 2,
+  };
+
+  enum class DegradationMode {
+    NORMAL = 0,
+    REDUCED_FUNCTIONALITY = 1,
+    PRIORITIZE_TRUSTED = 2,
+  };
   /**
    * @brief Constructor with default values
    */
@@ -95,9 +115,26 @@ public:
   // Security configuration
   bool enable_authentication;
   std::string authentication_key;
+  AuthAlgorithm authentication_algorithm;
+  std::unordered_map<uint32_t, std::string> authentication_keys;
   bool restrict_queries;
   std::vector<std::string> allowed_clients;
   std::vector<std::string> denied_clients;
+  bool enable_acl;
+  bool enable_rate_limiting;
+  uint32_t connection_rate_limit_per_minute;
+  uint32_t request_rate_limit_per_minute;
+  bool enable_ddos_protection;
+  uint32_t ddos_anomaly_threshold_per_second;
+
+  // Secure sync / certificate options
+  bool enable_encrypted_channels;
+  bool enable_certificate_validation;
+  bool enable_certificate_authentication;
+  bool enable_tls;
+  std::string tls_cert_file;
+  std::string tls_key_file;
+  std::string tls_ca_file;
 
   // Performance configuration
   size_t worker_threads;
@@ -112,6 +149,24 @@ public:
   // Leap second configuration
   std::string leap_second_file;
   bool enable_leap_second_handling;
+
+  // Reliability and resiliency
+  bool enable_automatic_failover;
+  bool enable_self_healing;
+  bool enable_graceful_degradation;
+  DegradationMode degradation_mode;
+  bool enable_state_persistence;
+  std::string state_file;
+  std::string backup_config_file;
+  uint32_t service_restart_limit;
+
+  // Advanced NTP features
+  UpstreamSelectionAlgorithm upstream_selection_algorithm;
+  bool enable_upstream_load_balancing;
+  bool enable_upstream_failover;
+  bool enable_dynamic_stratum_adjustment;
+  bool enable_reference_clock_support;
+  std::string reference_clock_source; // local|hardware|gps|atomic
 
 private:
   // Path of last-loaded configuration file (if any)
@@ -136,6 +191,7 @@ public:
    * @brief Apply SIMPLE_NTPD_* environment variable overrides
    */
   void applyEnvironmentOverrides();
+  bool parseAuthenticationKeySpec(const std::string &spec);
 
   /**
    * @brief Parse configuration file

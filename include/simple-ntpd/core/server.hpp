@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 #include <atomic>
 #include <functional>
+#include <random>
 #include <unordered_map>
 #include <memory>
 #include <mutex>
@@ -234,6 +235,15 @@ private:
    */
   void processPacket(const std::vector<uint8_t> &data,
                      const struct sockaddr_in &client_addr);
+  bool isClientAllowed(const std::string &client_ip) const;
+  bool isIpInCidr(const std::string &ip, const std::string &cidr) const;
+  bool isRateLimitExceeded(const std::string &client_ip);
+  bool isDdosAnomaly(const std::string &client_ip);
+  void persistState() const;
+  void loadState();
+  void backupConfig() const;
+  std::string selectUpstreamServer();
+  void applyDynamicStratum();
 
   /**
    * @brief Get or create connection for client
@@ -284,6 +294,13 @@ private:
   // Server timing
   std::chrono::steady_clock::time_point last_cleanup_time_;
   std::chrono::seconds cleanup_interval_;
+  std::atomic<uint32_t> restart_count_;
+  std::vector<std::string> healthy_upstreams_;
+  std::atomic<size_t> upstream_rr_index_;
+  mutable std::mutex security_mutex_;
+  std::unordered_map<std::string, std::pair<uint64_t, uint32_t>> connection_rate_buckets_;
+  std::unordered_map<std::string, std::pair<uint64_t, uint32_t>> request_second_buckets_;
+  std::mt19937 rng_;
 
   // Platform-specific data
   struct sockaddr_in server_addr_;

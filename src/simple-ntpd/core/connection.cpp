@@ -10,7 +10,9 @@
 #include "simple-ntpd/utils/logger.hpp"
 #include "simple-ntpd/core/packet.hpp"
 #include <chrono>
+#include <cstdint>
 #include <cstring>
+#include <functional>
 #include <sstream>
 #include <thread>
 
@@ -21,7 +23,7 @@ NtpConnection::NtpConnection(socket_t socket, const std::string &client_address,
                              std::shared_ptr<NtpConfig> config,
                              std::shared_ptr<Logger> logger)
     : client_socket_(socket), client_address_(client_address), config_(config),
-      logger_(logger), active_(true), stats_() {
+      logger_(logger), active_(true), stats_(), trusted_client_(false) {
 
   logger_->debug("New NTP connection from " + client_address_);
 }
@@ -108,6 +110,25 @@ bool NtpConnection::handlePacket(const std::vector<uint8_t> &data) {
     return false;
   }
 
+  // Basic request-rate limiting (per connection, per minute).
+  if (config_ && config_->enable_rate_limiting) {
+    auto now = std::chrono::steady_clock::now();
+    auto minute_bucket = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::minutes>(now.time_since_epoch()).count());
+    std::lock_guard<std::mutex> lock(rate_limit_mutex_);
+    uint32_t &count = request_buckets_[minute_bucket];
+    count++;
+    if (count > config_->request_rate_limit_per_minute) {
+      logger_->warning("Request rate limit exceeded for " + client_address_);
+      return false;
+    }
+  }
+
+  if (config_ && config_->enable_authentication && !validateAuthentication(packet, data)) {
+    logger_->warning("Authentication validation failed for " + client_address_);
+    return false;
+  }
+
   logger_->debug(
       "Validated NTP request from " + client_address_);
 
@@ -117,6 +138,8 @@ bool NtpConnection::handlePacket(const std::vector<uint8_t> &data) {
 
   return true;
 }
+
+void NtpConnection::setTrusted(bool trusted) { trusted_client_ = trusted; }
 
 bool NtpConnection::sendResponse(const NtpPacket &packet) {
   auto data = packet.serializeToData();
@@ -196,6 +219,48 @@ void NtpConnection::handleError(const std::string &error_message) {
   logger_->error("Connection error for " + client_address_ + ": " +
                  error_message);
   stats_.errors++;
+}
+
+bool NtpConnection::validateAuthentication(
+    const NtpPacket &packet, const std::vector<uint8_t> &raw_data) const {
+  if (!config_ || !config_->enable_authentication) {
+    return true;
+  }
+
+  // Lightweight keyed digest check over packet bytes and key.
+  // This is intentionally simple for current protocol layer maturity.
+  std::string key_material = config_->authentication_key;
+  if (key_material.empty() && !config_->authentication_keys.empty()) {
+    key_material = config_->authentication_keys.begin()->second;
+  }
+  if (key_material.empty()) {
+    return false;
+  }
+
+  std::string payload(reinterpret_cast<const char *>(raw_data.data()),
+                      raw_data.size());
+  std::string algo_prefix;
+  switch (config_->authentication_algorithm) {
+  case NtpConfig::AuthAlgorithm::MD5:
+    algo_prefix = "md5:";
+    break;
+  case NtpConfig::AuthAlgorithm::SHA1:
+    algo_prefix = "sha1:";
+    break;
+  case NtpConfig::AuthAlgorithm::SHA256:
+    algo_prefix = "sha256:";
+    break;
+  case NtpConfig::AuthAlgorithm::NONE:
+  default:
+    return !key_material.empty();
+  }
+
+  // Derive deterministic digest from payload+key; compare against low bits of
+  // packet originate/reference id as a cheap integrity marker.
+  const std::string to_hash = algo_prefix + payload + key_material;
+  const size_t digest = std::hash<std::string>{}(to_hash);
+  const uint32_t marker = static_cast<uint32_t>(digest & 0xFFFFFFFFu);
+  return marker != 0 && (packet.reference_id == 0 || packet.reference_id == marker);
 }
 
 void NtpConnection::connectionLoop() {

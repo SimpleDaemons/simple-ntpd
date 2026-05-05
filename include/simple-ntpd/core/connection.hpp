@@ -15,6 +15,8 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <mutex>
+#include <unordered_map>
 #include <memory>
 #include <string>
 #include <thread>
@@ -109,6 +111,11 @@ public:
    */
   bool handlePacket(const std::vector<uint8_t> &data);
 
+  /**
+   * @brief Mark this connection as trusted by ACL/auth flow
+   */
+  void setTrusted(bool trusted);
+
 private:
   /**
    * @brief Main connection loop
@@ -157,6 +164,9 @@ private:
    */
   void handleError(const std::string &error_message);
 
+  bool validateAuthentication(const NtpPacket &packet,
+                              const std::vector<uint8_t> &raw_data) const;
+
 private:
   socket_t client_socket_;
   std::string client_address_;
@@ -175,6 +185,9 @@ private:
   std::chrono::steady_clock::time_point last_packet_time_;
   NtpPacket last_request_packet_;
   bool authenticated_;
+  bool trusted_client_;
+  mutable std::mutex rate_limit_mutex_;
+  std::unordered_map<uint64_t, uint32_t> request_buckets_;
 
   // Buffer for packet processing
   std::vector<uint8_t> receive_buffer_;
