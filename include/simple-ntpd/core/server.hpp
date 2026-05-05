@@ -244,6 +244,7 @@ private:
   void backupConfig() const;
   std::string selectUpstreamServer();
   void applyDynamicStratum();
+  std::string effectiveReferenceId() const;
 
   /**
    * @brief Get or create connection for client

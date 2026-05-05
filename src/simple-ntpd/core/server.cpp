@@ -440,7 +440,7 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
     }
 
     NtpPacket response_packet = NtpPacket::createServerResponse(
-        request_packet, config_->stratum, config_->reference_id);
+        request_packet, config_->stratum, effectiveReferenceId());
     applyDynamicStratum();
     const std::string selected_upstream = selectUpstreamServer();
     if (!selected_upstream.empty()) {
@@ -456,6 +456,13 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
                      ":" + std::to_string(client_port) + ": " +
                      std::string(std::strerror(errno)));
       stats_.total_errors++;
+      if (config_ && config_->enable_upstream_failover && !selected_upstream.empty()) {
+        auto it = std::find(healthy_upstreams_.begin(), healthy_upstreams_.end(),
+                            selected_upstream);
+        if (it != healthy_upstreams_.end()) {
+          healthy_upstreams_.erase(it);
+        }
+      }
       return;
     }
 
@@ -792,20 +799,23 @@ std::string NtpServer::selectUpstreamServer() {
   if (!config_ || config_->upstream_servers.empty()) {
     return std::string();
   }
-  if (config_->upstream_servers.size() == 1) {
-    return config_->upstream_servers.front();
+  if (healthy_upstreams_.empty()) {
+    healthy_upstreams_ = config_->upstream_servers;
+  }
+  if (healthy_upstreams_.size() == 1) {
+    return healthy_upstreams_.front();
   }
   switch (config_->upstream_selection_algorithm) {
   case NtpConfig::UpstreamSelectionAlgorithm::RANDOM: {
-    std::uniform_int_distribution<size_t> dist(0, config_->upstream_servers.size() - 1);
-    return config_->upstream_servers[dist(rng_)];
+    std::uniform_int_distribution<size_t> dist(0, healthy_upstreams_.size() - 1);
+    return healthy_upstreams_[dist(rng_)];
   }
   case NtpConfig::UpstreamSelectionAlgorithm::LEAST_ERRORS:
     // For now fallback to round-robin until per-upstream error accounting is added.
   case NtpConfig::UpstreamSelectionAlgorithm::ROUND_ROBIN:
   default: {
-    const size_t idx = upstream_rr_index_.fetch_add(1) % config_->upstream_servers.size();
-    return config_->upstream_servers[idx];
+    const size_t idx = upstream_rr_index_.fetch_add(1) % healthy_upstreams_.size();
+    return healthy_upstreams_[idx];
   }
   }
 }
@@ -822,6 +832,24 @@ void NtpServer::applyDynamicStratum() {
       config_->stratum = static_cast<NtpStratum>(static_cast<int>(config_->stratum) + 1);
     }
   }
+}
+
+std::string NtpServer::effectiveReferenceId() const {
+  if (!config_ || !config_->enable_reference_clock_support) {
+    return config_ ? config_->reference_id : "LOCL";
+  }
+  std::string source = config_->reference_clock_source;
+  std::transform(source.begin(), source.end(), source.begin(), ::tolower);
+  if (source == "gps") {
+    return "GPS ";
+  }
+  if (source == "atomic") {
+    return "ATOM";
+  }
+  if (source == "hardware") {
+    return "HARD";
+  }
+  return config_->reference_id.empty() ? "LOCL" : config_->reference_id;
 }
 
 } // namespace simple_ntpd
