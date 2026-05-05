@@ -184,11 +184,54 @@ if(ENABLE_TESTS)
     # Add test targets
     add_test(NAME ntp_packet_tests COMMAND test_ntp_packet)
     add_test(NAME ntp_config_tests COMMAND test_ntp_config)
+
+    add_executable(test_ntp_integration tests/integration/test_ntp_integration.cpp)
+    target_link_libraries(test_ntp_integration ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_integration PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if(ENABLE_SSL)
+        target_link_libraries(test_ntp_integration OpenSSL::SSL OpenSSL::Crypto)
+    endif()
+    if(ENABLE_JSON)
+        target_link_libraries(test_ntp_integration ${JSONCPP_LIBRARIES})
+        target_include_directories(test_ntp_integration PRIVATE ${JSONCPP_INCLUDE_DIRS})
+        target_compile_options(test_ntp_integration PRIVATE ${JSONCPP_CFLAGS_OTHER})
+        target_link_directories(test_ntp_integration PRIVATE ${JSONCPP_LIBRARY_DIRS})
+    endif()
+
+    add_executable(test_ntp_security tests/security/test_ntp_security.cpp)
+    target_link_libraries(test_ntp_security ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_security PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if(ENABLE_SSL)
+        target_link_libraries(test_ntp_security OpenSSL::SSL OpenSSL::Crypto)
+    endif()
+    if(ENABLE_JSON)
+        target_link_libraries(test_ntp_security ${JSONCPP_LIBRARIES})
+        target_include_directories(test_ntp_security PRIVATE ${JSONCPP_INCLUDE_DIRS})
+        target_compile_options(test_ntp_security PRIVATE ${JSONCPP_CFLAGS_OTHER})
+        target_link_directories(test_ntp_security PRIVATE ${JSONCPP_LIBRARY_DIRS})
+    endif()
+
+    add_executable(test_ntp_performance tests/performance/test_ntp_performance.cpp)
+    target_link_libraries(test_ntp_performance ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_performance PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if(ENABLE_SSL)
+        target_link_libraries(test_ntp_performance OpenSSL::SSL OpenSSL::Crypto)
+    endif()
+    if(ENABLE_JSON)
+        target_link_libraries(test_ntp_performance ${JSONCPP_LIBRARIES})
+        target_include_directories(test_ntp_performance PRIVATE ${JSONCPP_INCLUDE_DIRS})
+        target_compile_options(test_ntp_performance PRIVATE ${JSONCPP_CFLAGS_OTHER})
+        target_link_directories(test_ntp_performance PRIVATE ${JSONCPP_LIBRARY_DIRS})
+    endif()
+    
+    add_test(NAME ntp_integration_tests COMMAND test_ntp_integration)
+    add_test(NAME ntp_security_tests COMMAND test_ntp_security)
+    add_test(NAME ntp_performance_tests COMMAND test_ntp_performance)
     
     # Add custom test target
     add_custom_target(run_tests
         COMMAND ${CMAKE_CTEST_COMMAND} --verbose
-        DEPENDS test_ntp_packet test_ntp_config
+        DEPENDS test_ntp_packet test_ntp_config test_ntp_integration test_ntp_security test_ntp_performance
         COMMENT "Running all tests"
     )
 endif()
