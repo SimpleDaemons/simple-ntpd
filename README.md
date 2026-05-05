@@ -2,8 +2,8 @@
 
 A lightweight, high-performance NTP (Network Time Protocol) daemon written in C++.
 
-**Current Release:** `v0.2.0`  
-**Status:** Production core complete, security/reliability milestone (`v0.3.0`) next.
+**Current Release:** `v0.3.0`  
+**Status:** Security and reliability milestone complete; enterprise feature roadmap (`v0.4.0`) next.
 
 ## Features
 

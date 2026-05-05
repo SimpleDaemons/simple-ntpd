@@ -4,6 +4,33 @@ All notable changes to the Simple NTP Daemon project will be documented in this 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-05
+
+### Added
+- Full 0.3 security/reliability feature set with authentication algorithms, ACL controls, rate limiting, DDoS anomaly controls, TLS/certificate configuration paths, self-healing restart hooks, state persistence/backup hooks, upstream failover selection, dynamic stratum adjustments, and reference clock source mapping.
+- New integration, security, and performance test suites wired into CTest.
+- Expanded deployment templates covering security and resilience options for development, production, and high-security profiles.
+
+### Changed
+- Upgraded project metadata and runtime version reporting to `v0.3.0`.
+- Updated roadmap/checklist/status docs to reflect completion of all 0.3.0 checklist categories and transition to 0.4.0 planning.
+
+## [0.3.4] - 2026-05-05
+### Added
+- End-to-end integration, security, and performance test executables in the default build.
+
+## [0.3.3] - 2026-05-05
+### Added
+- Reliability improvements including self-healing socket restart attempts, upstream health-aware selection/failover, and reference clock source mapping.
+
+## [0.3.2] - 2026-05-05
+### Added
+- Security hardening for TLS/certificate options and OpenSSL-based authentication digest derivation.
+
+## [0.3.1] - 2026-05-05
+### Added
+- Security and resilience config/runtime foundations including ACL/rate-limit controls, DDoS thresholds, failover/state persistence settings, and dynamic runtime toggles.
+
 ## [0.2.0] - 2026-04-25
 
 ### Added

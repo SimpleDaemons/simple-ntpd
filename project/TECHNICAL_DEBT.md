@@ -1,7 +1,7 @@
 # Simple NTP Daemon - Technical Debt
 
-**Date:** April 2026  
-**Current Version:** 0.2.0  
+**Date:** May 2026  
+**Current Version:** 0.3.0  
 **Purpose:** Track technical debt, known issues, and areas requiring improvement
 
 ---

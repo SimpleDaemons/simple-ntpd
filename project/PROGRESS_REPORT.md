@@ -1,15 +1,15 @@
 # Simple NTP Daemon - Progress Report
 
-**Date:** April 2026  
-**Current Version:** v0.2.0  
-**Overall Project Completion:** Production Version (Apache 2.0) - v0.2.0 Released  
+**Date:** May 2026  
+**Current Version:** v0.3.0  
+**Overall Project Completion:** Production Version (Apache 2.0) - v0.3.0 Released  
 **Product Versions:** Production (Apache 2.0), Enterprise (BSL 1.1 - Planned), Datacenter (BSL 1.1 - Planned)
 
 ---
 
 ## Executive Summary
 
-The project has completed the v0.2.0 milestone for the Production track. Core NTP service behavior is operational, configuration/runtime controls are expanded, observability has improved, and release metadata/build outputs are aligned to v0.2.0.
+The project has completed the v0.3.0 milestone for the Production track. Core NTP service behavior is operational with expanded security/reliability controls, improved observability, and broader test coverage across integration/security/performance suites.
 
 ## Completed in v0.2.0
 

@@ -36,28 +36,28 @@ Simple NTP Daemon (simple-ntpd) is a lightweight, secure, and easy-to-configure 
 - [x] Performance monitoring
 
 ## Version 0.3.0 - Security & Reliability
-**Target: Next Milestone**
-**Status: 🚧 In Planning**
+**Target: Completed**
+**Status: ✅ Complete**
 
 ### Security Features
-- [ ] NTP authentication (MD5, SHA-1, SHA-256)
-- [ ] Access control lists (ACL)
-- [ ] Rate limiting and DDoS protection
-- [ ] Secure time synchronization
-- [ ] Certificate-based authentication
+- [x] NTP authentication (MD5, SHA-1, SHA-256)
+- [x] Access control lists (ACL)
+- [x] Rate limiting and DDoS protection
+- [x] Secure time synchronization
+- [x] Certificate-based authentication
 
 ### Reliability Improvements
-- [ ] Automatic failover to backup servers
-- [ ] Health monitoring and self-healing
-- [ ] Graceful degradation
-- [ ] Backup and restore functionality
-- [ ] Disaster recovery procedures
+- [x] Automatic failover to backup servers
+- [x] Health monitoring and self-healing
+- [x] Graceful degradation
+- [x] Backup and restore functionality
+- [x] Disaster recovery procedures
 
 ### Advanced NTP Features
-- [ ] Multiple upstream server support
-- [ ] Stratum management
-- [ ] Reference clock support
-- [ ] Leap second handling
+- [x] Multiple upstream server support
+- [x] Stratum management
+- [x] Reference clock support
+- [x] Leap second handling
 - [ ] Interleaved mode support
 
 ## Version 0.4.0 - Enterprise Features

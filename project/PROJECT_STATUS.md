@@ -15,9 +15,9 @@ Simple NTP Daemon is a lightweight, high-performance NTP (Network Time Protocol)
 The project is organized into three product versions:
 
 ### 🏭 Production Version (Apache 2.0)
-- **Status:** ✅ v0.2.0 Released
+- **Status:** ✅ v0.3.0 Released
 - **Target:** Small to medium deployments, single-server installations
-- **Features:** Complete NTP protocol, basic security, multi-format configuration, hot reload
+- **Features:** Complete NTP protocol, authentication/ACL/rate controls, TLS-ready config, failover/resilience behaviors, multi-format configuration, hot reload
 - **Documentation:** `docs/production/`
 
 ### 🏢 Enterprise Version (BSL 1.1)
