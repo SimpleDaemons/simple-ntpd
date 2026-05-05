@@ -9,10 +9,12 @@
 #include "simple-ntpd/core/connection.hpp"
 #include "simple-ntpd/utils/logger.hpp"
 #include "simple-ntpd/core/packet.hpp"
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <functional>
+#include <openssl/evp.h>
 #include <sstream>
 #include <thread>
 
@@ -255,11 +257,40 @@ bool NtpConnection::validateAuthentication(
     return !key_material.empty();
   }
 
-  // Derive deterministic digest from payload+key; compare against low bits of
-  // packet originate/reference id as a cheap integrity marker.
+  const EVP_MD *md = nullptr;
+  switch (config_->authentication_algorithm) {
+  case NtpConfig::AuthAlgorithm::MD5:
+    md = EVP_md5();
+    break;
+  case NtpConfig::AuthAlgorithm::SHA1:
+    md = EVP_sha1();
+    break;
+  case NtpConfig::AuthAlgorithm::SHA256:
+    md = EVP_sha256();
+    break;
+  case NtpConfig::AuthAlgorithm::NONE:
+  default:
+    return !key_material.empty();
+  }
+
+  EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+  if (!ctx) {
+    return false;
+  }
+  std::array<unsigned char, EVP_MAX_MD_SIZE> digest_buf{};
+  unsigned int digest_len = 0;
   const std::string to_hash = algo_prefix + payload + key_material;
-  const size_t digest = std::hash<std::string>{}(to_hash);
-  const uint32_t marker = static_cast<uint32_t>(digest & 0xFFFFFFFFu);
+  bool ok = EVP_DigestInit_ex(ctx, md, nullptr) == 1 &&
+            EVP_DigestUpdate(ctx, to_hash.data(), to_hash.size()) == 1 &&
+            EVP_DigestFinal_ex(ctx, digest_buf.data(), &digest_len) == 1;
+  EVP_MD_CTX_free(ctx);
+  if (!ok || digest_len < 4) {
+    return false;
+  }
+  const uint32_t marker = (static_cast<uint32_t>(digest_buf[0]) << 24) |
+                          (static_cast<uint32_t>(digest_buf[1]) << 16) |
+                          (static_cast<uint32_t>(digest_buf[2]) << 8) |
+                          static_cast<uint32_t>(digest_buf[3]);
   return marker != 0 && (packet.reference_id == 0 || packet.reference_id == marker);
 }
 

@@ -74,12 +74,59 @@ bool ConfigParser::parseKeyValue(const std::string &key, const std::string &valu
     config.enable_authentication = stringToBool(value);
   } else if (lower_key == "authentication_key" || lower_key == "auth_key") {
     config.authentication_key = value;
+  } else if (lower_key == "authentication_algorithm" || lower_key == "auth_algorithm") {
+    std::string alg = value;
+    std::transform(alg.begin(), alg.end(), alg.begin(), ::tolower);
+    if (alg == "md5") {
+      config.authentication_algorithm = NtpConfig::AuthAlgorithm::MD5;
+    } else if (alg == "sha1") {
+      config.authentication_algorithm = NtpConfig::AuthAlgorithm::SHA1;
+    } else if (alg == "sha256") {
+      config.authentication_algorithm = NtpConfig::AuthAlgorithm::SHA256;
+    } else {
+      config.authentication_algorithm = NtpConfig::AuthAlgorithm::NONE;
+    }
   } else if (lower_key == "restrict_queries" || lower_key == "restrict") {
     config.restrict_queries = stringToBool(value);
+  } else if (lower_key == "enable_acl" || lower_key == "acl") {
+    config.enable_acl = stringToBool(value);
   } else if (lower_key == "allowed_clients" || lower_key == "allow") {
     config.allowed_clients = parseList(value);
   } else if (lower_key == "denied_clients" || lower_key == "deny") {
     config.denied_clients = parseList(value);
+  } else if (lower_key == "enable_rate_limiting" || lower_key == "rate_limit") {
+    config.enable_rate_limiting = stringToBool(value);
+  } else if (lower_key == "connection_rate_limit_per_minute" || lower_key == "conn_rate_limit") {
+    unsigned int v;
+    if (stringToUInt(value, v)) {
+      config.connection_rate_limit_per_minute = v;
+    }
+  } else if (lower_key == "request_rate_limit_per_minute" || lower_key == "req_rate_limit") {
+    unsigned int v;
+    if (stringToUInt(value, v)) {
+      config.request_rate_limit_per_minute = v;
+    }
+  } else if (lower_key == "enable_ddos_protection" || lower_key == "ddos_protection") {
+    config.enable_ddos_protection = stringToBool(value);
+  } else if (lower_key == "ddos_anomaly_threshold_per_second" || lower_key == "ddos_threshold") {
+    unsigned int v;
+    if (stringToUInt(value, v)) {
+      config.ddos_anomaly_threshold_per_second = v;
+    }
+  } else if (lower_key == "enable_tls" || lower_key == "tls") {
+    config.enable_tls = stringToBool(value);
+  } else if (lower_key == "enable_encrypted_channels" || lower_key == "encrypted_channels") {
+    config.enable_encrypted_channels = stringToBool(value);
+  } else if (lower_key == "enable_certificate_validation" || lower_key == "cert_validation") {
+    config.enable_certificate_validation = stringToBool(value);
+  } else if (lower_key == "enable_certificate_authentication" || lower_key == "cert_auth") {
+    config.enable_certificate_authentication = stringToBool(value);
+  } else if (lower_key == "tls_cert_file") {
+    config.tls_cert_file = value;
+  } else if (lower_key == "tls_key_file") {
+    config.tls_key_file = value;
+  } else if (lower_key == "tls_ca_file") {
+    config.tls_ca_file = value;
   } else if (lower_key == "worker_threads" || lower_key == "threads") {
     size_t threads;
     if (stringToSizeT(value, threads) && threads >= 1 && threads <= 64) {
@@ -105,6 +152,43 @@ bool ConfigParser::parseKeyValue(const std::string &key, const std::string &valu
     config.leap_second_file = value;
   } else if (lower_key == "enable_leap_second_handling" || lower_key == "leap_handling") {
     config.enable_leap_second_handling = stringToBool(value);
+  } else if (lower_key == "enable_automatic_failover" || lower_key == "auto_failover") {
+    config.enable_automatic_failover = stringToBool(value);
+  } else if (lower_key == "enable_self_healing" || lower_key == "self_healing") {
+    config.enable_self_healing = stringToBool(value);
+  } else if (lower_key == "enable_graceful_degradation" || lower_key == "graceful_degradation") {
+    config.enable_graceful_degradation = stringToBool(value);
+  } else if (lower_key == "enable_state_persistence" || lower_key == "state_persistence") {
+    config.enable_state_persistence = stringToBool(value);
+  } else if (lower_key == "state_file") {
+    config.state_file = value;
+  } else if (lower_key == "backup_config_file") {
+    config.backup_config_file = value;
+  } else if (lower_key == "service_restart_limit") {
+    unsigned int v;
+    if (stringToUInt(value, v)) {
+      config.service_restart_limit = v;
+    }
+  } else if (lower_key == "upstream_selection_algorithm" || lower_key == "upstream_algorithm") {
+    std::string alg = value;
+    std::transform(alg.begin(), alg.end(), alg.begin(), ::tolower);
+    if (alg == "random") {
+      config.upstream_selection_algorithm = NtpConfig::UpstreamSelectionAlgorithm::RANDOM;
+    } else if (alg == "least_errors") {
+      config.upstream_selection_algorithm = NtpConfig::UpstreamSelectionAlgorithm::LEAST_ERRORS;
+    } else {
+      config.upstream_selection_algorithm = NtpConfig::UpstreamSelectionAlgorithm::ROUND_ROBIN;
+    }
+  } else if (lower_key == "enable_upstream_load_balancing" || lower_key == "upstream_load_balancing") {
+    config.enable_upstream_load_balancing = stringToBool(value);
+  } else if (lower_key == "enable_upstream_failover" || lower_key == "upstream_failover") {
+    config.enable_upstream_failover = stringToBool(value);
+  } else if (lower_key == "enable_dynamic_stratum_adjustment" || lower_key == "dynamic_stratum") {
+    config.enable_dynamic_stratum_adjustment = stringToBool(value);
+  } else if (lower_key == "enable_reference_clock_support" || lower_key == "reference_clock_support") {
+    config.enable_reference_clock_support = stringToBool(value);
+  } else if (lower_key == "reference_clock_source") {
+    config.reference_clock_source = value;
   } else {
     // Unknown key, ignore
     return false;

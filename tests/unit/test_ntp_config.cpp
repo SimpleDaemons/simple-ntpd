@@ -47,6 +47,9 @@ public:
     total++; if (testEnvironmentOverrides()) { passed++; std::cout << "✓ testEnvironmentOverrides passed" << std::endl; }
     else { std::cout << "✗ testEnvironmentOverrides failed" << std::endl; }
 
+    total++; if (testSecurityAndReliabilityOptions()) { passed++; std::cout << "✓ testSecurityAndReliabilityOptions passed" << std::endl; }
+    else { std::cout << "✗ testSecurityAndReliabilityOptions failed" << std::endl; }
+
     std::cout << "\nConfig Test Results: " << passed << "/" << total << " tests passed" << std::endl;
     return (passed == total) ? 0 : 1;
   }
@@ -254,6 +257,54 @@ enable_console_logging: true
       unsetenv("SIMPLE_NTPD_LOG_JSON");
       unsetenv("SIMPLE_NTPD_WORKER_THREADS");
       unsetenv("SIMPLE_NTPD_REFERENCE_ID");
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+
+  static bool testSecurityAndReliabilityOptions() {
+    try {
+      NtpConfig config;
+      assert(config.parseCommandLineArg("enable_acl", "true"));
+      assert(config.parseCommandLineArg("enable_rate_limiting", "true"));
+      assert(config.parseCommandLineArg("connection_rate_limit_per_minute", "50"));
+      assert(config.parseCommandLineArg("request_rate_limit_per_minute", "250"));
+      assert(config.parseCommandLineArg("enable_ddos_protection", "true"));
+      assert(config.parseCommandLineArg("ddos_anomaly_threshold_per_second", "100"));
+      assert(config.parseCommandLineArg("authentication_algorithm", "sha256"));
+      assert(config.parseCommandLineArg("enable_tls", "true"));
+      assert(config.parseCommandLineArg("tls_cert_file", "/tmp/cert.pem"));
+      assert(config.parseCommandLineArg("tls_key_file", "/tmp/key.pem"));
+      assert(config.parseCommandLineArg("enable_certificate_validation", "true"));
+      assert(config.parseCommandLineArg("tls_ca_file", "/tmp/ca.pem"));
+      assert(config.parseCommandLineArg("enable_automatic_failover", "true"));
+      assert(config.parseCommandLineArg("enable_self_healing", "true"));
+      assert(config.parseCommandLineArg("enable_graceful_degradation", "true"));
+      assert(config.parseCommandLineArg("upstream_selection_algorithm", "random"));
+      assert(config.parseCommandLineArg("enable_dynamic_stratum_adjustment", "true"));
+      assert(config.parseCommandLineArg("enable_reference_clock_support", "true"));
+      assert(config.parseCommandLineArg("reference_clock_source", "gps"));
+
+      assert(config.enable_acl);
+      assert(config.enable_rate_limiting);
+      assert(config.connection_rate_limit_per_minute == 50);
+      assert(config.request_rate_limit_per_minute == 250);
+      assert(config.enable_ddos_protection);
+      assert(config.ddos_anomaly_threshold_per_second == 100);
+      assert(config.authentication_algorithm == NtpConfig::AuthAlgorithm::SHA256);
+      assert(config.enable_tls);
+      assert(config.tls_cert_file == "/tmp/cert.pem");
+      assert(config.tls_key_file == "/tmp/key.pem");
+      assert(config.enable_certificate_validation);
+      assert(config.tls_ca_file == "/tmp/ca.pem");
+      assert(config.enable_automatic_failover);
+      assert(config.enable_self_healing);
+      assert(config.enable_graceful_degradation);
+      assert(config.upstream_selection_algorithm == NtpConfig::UpstreamSelectionAlgorithm::RANDOM);
+      assert(config.enable_dynamic_stratum_adjustment);
+      assert(config.enable_reference_clock_support);
+      assert(config.reference_clock_source == "gps");
       return true;
     } catch (...) {
       return false;
