@@ -216,6 +216,12 @@ callgrind.out.*
 *.dmg
 *.pkg
 
+# Cursor IDE (local editor settings)
+.cursor/
+
+# Local release snapshots (not versioned)
+.releases/
+
 # Clang/LLVM
 .clangd/
 .clang-format
