@@ -11,6 +11,7 @@
 #include "simple-ntpd/utils/logger.hpp"
 #include "simple-ntpd/config/config.hpp"
 #include "simple-ntpd/core/connection.hpp"
+#include "simple-ntpd/core/upstream_sync.hpp"
 #include "simple-ntpd/utils/platform.hpp"
 #include <arpa/inet.h>
 #include <atomic>
@@ -135,6 +136,17 @@ public:
   std::shared_ptr<NtpConfig> getConfig() const;
 
   /**
+   * @brief List active client connections
+   * @return Human-readable connection list
+   */
+  std::string listConnections() const;
+
+  /**
+   * @brief Upstream sync manager (may be null if no upstreams configured)
+   */
+  std::shared_ptr<UpstreamSyncManager> getUpstreamSync() const;
+
+  /**
    * @brief Set configuration change callback
    * @param callback Callback function
    */
@@ -236,7 +248,6 @@ private:
   void processPacket(const std::vector<uint8_t> &data,
                      const struct sockaddr_in &client_addr);
   bool isClientAllowed(const std::string &client_ip) const;
-  bool isIpInCidr(const std::string &ip, const std::string &cidr) const;
   bool isRateLimitExceeded(const std::string &client_ip);
   bool isDdosAnomaly(const std::string &client_ip);
   void persistState() const;
@@ -302,6 +313,7 @@ private:
   std::unordered_map<std::string, std::pair<uint64_t, uint32_t>> connection_rate_buckets_;
   std::unordered_map<std::string, std::pair<uint64_t, uint32_t>> request_second_buckets_;
   std::mt19937 rng_;
+  std::shared_ptr<UpstreamSyncManager> upstream_sync_;
 
   // Platform-specific data
   struct sockaddr_in server_addr_;

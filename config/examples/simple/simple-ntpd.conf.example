@@ -21,14 +21,33 @@ log_level = INFO
 enable_console_logging = true
 enable_syslog = false
 
-# Security Configuration
-enable_authentication = false
-authentication_key = ""
-restrict_queries = false
-allowed_clients = []
-denied_clients = []
+# Security & Access Control (v0.3.0+)
+enable_authentication = true
+authentication_key = "replace-with-strong-secret"
+authentication_algorithm = sha256
 
-# Performance Configuration
+# Basic ACLs – restrict to RFC1918 networks
+enable_acl = true
+restrict_queries = true
+allowed_clients = 10.0.0.0/8,192.168.0.0/16
+denied_clients = 0.0.0.0/0
+
+# Rate limiting and DDoS protection
+enable_rate_limiting = true
+connection_rate_limit_per_minute = 120
+request_rate_limit_per_minute = 600
+enable_ddos_protection = true
+ddos_anomaly_threshold_per_second = 200
+
+# TLS / certificate configuration (optional, if terminating TLS in-process)
+enable_tls = false
+enable_certificate_validation = false
+enable_certificate_authentication = false
+tls_cert_file = /etc/simple-ntpd/tls/server.crt
+tls_key_file = /etc/simple-ntpd/tls/server.key
+tls_ca_file = /etc/simple-ntpd/tls/ca.crt
+
+# Performance & statistics
 worker_threads = 4
 max_packet_size = 1024
 enable_statistics = true

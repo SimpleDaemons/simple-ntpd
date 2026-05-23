@@ -88,7 +88,7 @@ void printUsage() {
  * @brief Print version information
  */
 void printVersion() {
-  std::cout << "simple-ntpd v0.3.0" << std::endl;
+  std::cout << "simple-ntpd v1.0.0" << std::endl;
   std::cout << "Simple NTP Daemon for Linux, macOS, and Windows" << std::endl;
   std::cout << "Copyright (c) 2024 BLBurns <contact@blburns.com>" << std::endl;
   std::cout << "Licensed under Apache License 2.0" << std::endl;
@@ -214,14 +214,16 @@ bool parseCommandLine(int argc, char *argv[],
     g_startup_command = command;
     return true;
   } else if (command == "stop") {
-    std::cout << "Stop command not implemented yet" << std::endl;
+    std::cout << "Stop requires a running daemon instance (use service manager)"
+              << std::endl;
     return false;
   } else if (command == "restart") {
-    std::cout << "Restart command not implemented yet" << std::endl;
+    std::cout << "Restart requires a running daemon instance (use service manager)"
+              << std::endl;
     return false;
   } else if (command == "status") {
-    std::cout << "Status command not implemented yet" << std::endl;
-    return false;
+    g_startup_command = command;
+    return true;
   } else if (command == "reload") {
     // We'll perform a one-shot reload after startup in main()
     g_startup_command = command;
@@ -233,14 +235,18 @@ bool parseCommandLine(int argc, char *argv[],
     g_startup_command = command;
     return true;
   } else if (command == "test") {
-    std::cout << "Test command not implemented yet" << std::endl;
+    if (config->validate()) {
+      std::cout << "Configuration test passed" << std::endl;
+      return false;
+    }
+    std::cerr << "Configuration test failed" << std::endl;
     return false;
   } else if (command == "stats") {
-    std::cout << "Stats command not implemented yet" << std::endl;
-    return false;
+    g_startup_command = command;
+    return true;
   } else if (command == "connections") {
-    std::cout << "Connections command not implemented yet" << std::endl;
-    return false;
+    g_startup_command = command;
+    return true;
   } else {
     std::cerr << "Error: Unknown command: " << command << std::endl;
     printUsage();
@@ -312,7 +318,7 @@ int main(int argc, char *argv[]) {
   g_logger->setLogRotation(config->log_max_size_bytes, config->log_max_files);
 
     // Log startup
-    g_logger->info("Starting simple-ntpd v0.3.0");
+    g_logger->info("Starting simple-ntpd v1.0.0");
     g_logger->info("Configuration: " + config->toString());
 
     // Initialize signal handlers
@@ -345,6 +351,25 @@ int main(int argc, char *argv[]) {
       return 0;
     } else if (g_startup_command == "health") {
       std::cout << g_server->runHealthChecks();
+      g_server->stop();
+      return 0;
+    } else if (g_startup_command == "status") {
+      std::cout << g_server->getStatus();
+      g_server->stop();
+      return 0;
+    } else if (g_startup_command == "stats") {
+      const auto stats = g_server->getStats();
+      std::cout << "NTP Server Statistics:\n";
+      std::cout << "  Total Connections: " << stats.total_connections << "\n";
+      std::cout << "  Active Connections: " << stats.active_connections << "\n";
+      std::cout << "  Total Requests: " << stats.total_requests << "\n";
+      std::cout << "  Total Responses: " << stats.total_responses << "\n";
+      std::cout << "  Total Errors: " << stats.total_errors << "\n";
+      std::cout << "  Bytes Transferred: " << stats.total_bytes_transferred << "\n";
+      g_server->stop();
+      return 0;
+    } else if (g_startup_command == "connections") {
+      std::cout << g_server->listConnections();
       g_server->stop();
       return 0;
     }

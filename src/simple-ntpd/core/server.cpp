@@ -10,6 +10,7 @@
 #include "simple-ntpd/utils/logger.hpp"
 #include "simple-ntpd/config/config.hpp"
 #include "simple-ntpd/core/connection.hpp"
+#include "simple-ntpd/utils/net.hpp"
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -107,6 +108,15 @@ bool NtpServer::start() {
   loadState();
   healthy_upstreams_ = config_->upstream_servers;
 
+  if (!config_->upstream_servers.empty()) {
+    upstream_sync_ =
+        std::make_shared<UpstreamSyncManager>(config_, logger_);
+    upstream_sync_->start();
+    logger_->info("Upstream synchronization started (" +
+                   std::to_string(config_->upstream_servers.size()) +
+                   " server(s))");
+  }
+
   logger_->info("NTP Server started successfully");
   logger_->info("Listening on " + config_->listen_address + ":" +
                 std::to_string(config_->listen_port));
@@ -173,6 +183,11 @@ void NtpServer::stop() {
   logger_->info("Stopping NTP Server...");
 
   running_ = false;
+
+  if (upstream_sync_) {
+    upstream_sync_->stop();
+    upstream_sync_.reset();
+  }
 
   // Stop worker threads
   stopWorkerThreads();
@@ -439,9 +454,26 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
       return;
     }
 
+    NtpStratum response_stratum = config_->stratum;
+    if (upstream_sync_ && upstream_sync_->isSynced()) {
+      response_stratum = static_cast<NtpStratum>(upstream_sync_->effectiveStratum(
+          static_cast<uint8_t>(config_->stratum)));
+    }
+
     NtpPacket response_packet = NtpPacket::createServerResponse(
-        request_packet, config_->stratum, effectiveReferenceId());
+        request_packet, response_stratum, effectiveReferenceId());
     applyDynamicStratum();
+
+    if (upstream_sync_) {
+      const int64_t offset_us = upstream_sync_->clockOffsetUs();
+      if (offset_us != 0) {
+        const auto offset = std::chrono::microseconds(offset_us);
+        response_packet.receive_ts = NtpTimestamp::fromSystemTime(
+            response_packet.receive_ts.toSystemTime() + offset);
+        response_packet.transmit_ts = NtpTimestamp::fromSystemTime(
+            response_packet.transmit_ts.toSystemTime() + offset);
+      }
+    }
     const std::string selected_upstream = selectUpstreamServer();
     if (!selected_upstream.empty()) {
       logger_->debug("Selected upstream server: " + selected_upstream);
@@ -542,6 +574,38 @@ void NtpServer::cleanupConnections() {
 
 std::shared_ptr<NtpConfig> NtpServer::getConfig() const { return config_; }
 
+std::shared_ptr<UpstreamSyncManager> NtpServer::getUpstreamSync() const {
+  return upstream_sync_;
+}
+
+NtpServerStats NtpServer::getStats() const {
+  std::lock_guard<std::mutex> lock(stats_mutex_);
+  return stats_;
+}
+
+size_t NtpServer::getActiveConnectionCount() const {
+  std::lock_guard<std::mutex> lock(connections_mutex_);
+  return active_connections_.size();
+}
+
+std::string NtpServer::listConnections() const {
+  std::stringstream ss;
+  ss << "Active NTP Clients:\n";
+  std::lock_guard<std::mutex> lock(connections_mutex_);
+  if (active_connections_.empty()) {
+    ss << "  (none)\n";
+    return ss.str();
+  }
+  for (const auto &entry : active_connections_) {
+    const auto &conn = entry.second;
+    const auto stats = conn->getStats();
+    ss << "  " << entry.first << " packets_rx=" << stats.packets_received
+       << " packets_tx=" << stats.packets_sent << " errors=" << stats.errors
+       << "\n";
+  }
+  return ss.str();
+}
+
 std::string NtpServer::getStatus() const {
   std::stringstream ss;
 
@@ -569,6 +633,9 @@ std::string NtpServer::getStatus() const {
       double throughput = static_cast<double>(stats_.total_requests) /
                           std::max(1.0, static_cast<double>(uptime_seconds));
       ss << "  Throughput (req/s): " << throughput << "\n";
+    }
+    if (upstream_sync_) {
+      ss << upstream_sync_->statusSummary();
     }
   }
 
@@ -606,6 +673,16 @@ std::string NtpServer::exportPrometheusMetrics() const {
   m << "# TYPE simple_ntpd_uptime_seconds gauge\n";
   m << "simple_ntpd_uptime_seconds " << uptime_seconds << "\n";
 
+  if (upstream_sync_) {
+    m << "# HELP simple_ntpd_upstream_synced Whether upstream sync succeeded\n";
+    m << "# TYPE simple_ntpd_upstream_synced gauge\n";
+    m << "simple_ntpd_upstream_synced "
+      << (upstream_sync_->isSynced() ? 1 : 0) << "\n";
+    m << "# HELP simple_ntpd_clock_offset_us Estimated clock offset from upstream\n";
+    m << "# TYPE simple_ntpd_clock_offset_us gauge\n";
+    m << "simple_ntpd_clock_offset_us " << upstream_sync_->clockOffsetUs() << "\n";
+  }
+
 #ifndef _WIN32
   struct rusage usage {};
   if (getrusage(RUSAGE_SELF, &usage) == 0) {
@@ -640,6 +717,15 @@ std::string NtpServer::runHealthChecks() const {
   ss << "active_connections: " << stats_.active_connections << "\n";
   ss << "total_errors: " << stats_.total_errors << "\n";
   ss << "config_loaded: " << (config_ && !config_->lastConfigFile().empty() ? "true" : "false") << "\n";
+
+  if (config_ && !config_->upstream_servers.empty()) {
+    const bool synced = upstream_sync_ && upstream_sync_->isSynced();
+    ss << "upstream_synced: " << (synced ? "true" : "false") << "\n";
+    if (!synced) {
+      healthy = false;
+      ss << "warning: upstream time synchronization not established\n";
+    }
+  }
 
   if (config_ && config_->enable_leap_second_handling) {
 #if __has_include(<filesystem>)
@@ -690,29 +776,6 @@ bool NtpServer::isClientAllowed(const std::string &client_ip) const {
     }
   }
   return false;
-}
-
-bool NtpServer::isIpInCidr(const std::string &ip, const std::string &cidr) const {
-  size_t slash = cidr.find('/');
-  if (slash == std::string::npos) {
-    return ip == cidr;
-  }
-  const std::string base_ip = cidr.substr(0, slash);
-  const int prefix = std::stoi(cidr.substr(slash + 1));
-  if (prefix < 0 || prefix > 32) {
-    return false;
-  }
-
-  struct in_addr ip_addr {};
-  struct in_addr base_addr {};
-  if (inet_pton(AF_INET, ip.c_str(), &ip_addr) != 1 ||
-      inet_pton(AF_INET, base_ip.c_str(), &base_addr) != 1) {
-    return false;
-  }
-  const uint32_t ip_u = ntohl(ip_addr.s_addr);
-  const uint32_t base_u = ntohl(base_addr.s_addr);
-  const uint32_t mask = prefix == 0 ? 0 : 0xFFFFFFFFu << (32 - prefix);
-  return (ip_u & mask) == (base_u & mask);
 }
 
 bool NtpServer::isRateLimitExceeded(const std::string &client_ip) {

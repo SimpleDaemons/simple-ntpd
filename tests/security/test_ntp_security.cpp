@@ -4,6 +4,7 @@
  */
 
 #include "simple-ntpd/config/config.hpp"
+#include "simple-ntpd/utils/net.hpp"
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -33,6 +34,9 @@ int main() {
   config.authentication_key.clear();
   assert(!config.validateDetailed(errors));
   assert(!errors.empty());
+
+  assert(isIpInCidr("10.5.6.7", "10.0.0.0/8"));
+  assert(!isIpInCidr("11.5.6.7", "10.0.0.0/8"));
 
   std::cout << "Security tests passed." << std::endl;
   return 0;

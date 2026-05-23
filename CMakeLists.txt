@@ -3,7 +3,7 @@
 # Copyright 2024 SimpleDaemons
 
 cmake_minimum_required(VERSION 3.16)
-project(simple-ntpd VERSION 0.3.0 LANGUAGES CXX)
+project(simple-ntpd VERSION 1.0.0 LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -227,11 +227,44 @@ if(ENABLE_TESTS)
     add_test(NAME ntp_integration_tests COMMAND test_ntp_integration)
     add_test(NAME ntp_security_tests COMMAND test_ntp_security)
     add_test(NAME ntp_performance_tests COMMAND test_ntp_performance)
+
+    add_executable(test_ntp_net tests/unit/test_ntp_net.cpp)
+    target_link_libraries(test_ntp_net ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_net PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    add_test(NAME ntp_net_tests COMMAND test_ntp_net)
+
+    add_executable(test_ntp_udp tests/integration/test_ntp_udp.cpp)
+    target_link_libraries(test_ntp_udp ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_udp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if(ENABLE_SSL)
+        target_link_libraries(test_ntp_udp OpenSSL::SSL OpenSSL::Crypto)
+    endif()
+    if(ENABLE_JSON)
+        target_link_libraries(test_ntp_udp ${JSONCPP_LIBRARIES})
+        target_include_directories(test_ntp_udp PRIVATE ${JSONCPP_INCLUDE_DIRS})
+        target_compile_options(test_ntp_udp PRIVATE ${JSONCPP_CFLAGS_OTHER})
+        target_link_directories(test_ntp_udp PRIVATE ${JSONCPP_LIBRARY_DIRS})
+    endif()
+    add_test(NAME ntp_udp_tests COMMAND test_ntp_udp)
+
+    add_executable(test_ntp_upstream tests/integration/test_ntp_upstream.cpp)
+    target_link_libraries(test_ntp_upstream ${PROJECT_NAME}_lib Threads::Threads)
+    target_include_directories(test_ntp_upstream PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    if(ENABLE_SSL)
+        target_link_libraries(test_ntp_upstream OpenSSL::SSL OpenSSL::Crypto)
+    endif()
+    if(ENABLE_JSON)
+        target_link_libraries(test_ntp_upstream ${JSONCPP_LIBRARIES})
+        target_include_directories(test_ntp_upstream PRIVATE ${JSONCPP_INCLUDE_DIRS})
+        target_compile_options(test_ntp_upstream PRIVATE ${JSONCPP_CFLAGS_OTHER})
+        target_link_directories(test_ntp_upstream PRIVATE ${JSONCPP_LIBRARY_DIRS})
+    endif()
+    add_test(NAME ntp_upstream_tests COMMAND test_ntp_upstream)
     
     # Add custom test target
     add_custom_target(run_tests
         COMMAND ${CMAKE_CTEST_COMMAND} --verbose
-        DEPENDS test_ntp_packet test_ntp_config test_ntp_integration test_ntp_security test_ntp_performance
+        DEPENDS test_ntp_packet test_ntp_config test_ntp_integration test_ntp_security test_ntp_performance test_ntp_net test_ntp_udp test_ntp_upstream
         COMMENT "Running all tests"
     )
 endif()

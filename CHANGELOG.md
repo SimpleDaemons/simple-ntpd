@@ -4,6 +4,20 @@ All notable changes to the Simple NTP Daemon project will be documented in this 
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-23
+
+### Added
+- **Upstream NTP synchronization**: background sync against configured upstream servers with clock offset tracking, stratum derivation, and corrected response timestamps.
+- **Network utilities**: shared IPv4 CIDR matching (`utils/net.hpp`) used by ACL enforcement and tests.
+- **UDP integration test**: live local server round-trip over UDP (`test_ntp_udp`).
+- **Upstream sync tests**: offline manager tests by default; live `pool.ntp.org` checks with `SIMPLE_NTPD_NETWORK_TESTS=1`.
+- **CLI**: `status`, `stats`, and `connections` commands; `test` validates configuration.
+
+### Changed
+- Production release version bumped to `v1.0.0` (CMake, CLI, README).
+- Health checks and Prometheus metrics include upstream sync state.
+- `getStats()` and `getActiveConnectionCount()` implemented on `NtpServer`.
+
 ## [0.3.0] - 2026-05-05
 
 ### Added

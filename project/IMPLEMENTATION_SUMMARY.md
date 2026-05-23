@@ -199,37 +199,26 @@ This document summarizes major improvements completed for the v0.3.0 release, ad
 
 ## 🚀 What's Next
 
-### Immediate (v0.3.0)
-1. **Test Coverage Expansion** (40% → 60%+)
-   - Add tests for NTP server
-   - Add tests for connection handling
-   - Add integration tests
-   - Add performance tests
+### Immediate (v0.3.x Hardening)
+1. **Test Coverage Expansion**
+   - Grow security, reliability, and integration suites
+   - Add more performance and stress tests
+   - Exercise upstream/ACL/rate-limit edge cases
 
 2. **Production Testing**
    - Real-world deployment testing
    - Performance benchmarking
-   - Security validation
+   - Security validation under realistic workloads
 
-### Short Term (v0.3.0 Delivery)
+### Short Term (v0.4.0 Planning)
 1. **Documentation Polish**
-   - Update all docs to reflect actual status
-   - Add usage examples for new features
-   - Create migration guides
+   - Keep docs aligned with 0.3.x behavior
+   - Add usage examples for new security/reliability features
+   - Create migration guides for older versions
 
-2. **Bug Fixes**
-   - Address any issues from testing
-   - Performance optimizations
-
-### Medium Term (v0.2.0)
-1. **Enhanced Validation** (8-10 hours)
-   - Improved packet validation
-   - Better error handling
-
-2. **Performance Optimization** (15-20 hours)
-   - Memory optimization
-   - CPU optimization
-   - Network optimization
+2. **Bug Fixes and Optimization**
+   - Address issues identified in 0.3.x rollouts
+   - Targeted performance optimizations
 
 ---
 

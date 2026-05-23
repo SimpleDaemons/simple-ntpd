@@ -13,5 +13,20 @@
   "max_connections": 1000,
   "upstream_servers": "pool.ntp.org,time.nist.gov",
   "sync_interval": 64,
-  "timeout": 1000
+  "timeout": 1000,
+
+  "enable_authentication": true,
+  "authentication_key": "replace-with-strong-secret",
+  "authentication_algorithm": "sha256",
+
+  "enable_acl": true,
+  "restrict_queries": true,
+  "allowed_clients": "10.0.0.0/8,192.168.0.0/16",
+  "denied_clients": "0.0.0.0/0",
+
+  "enable_rate_limiting": true,
+  "connection_rate_limit_per_minute": 120,
+  "request_rate_limit_per_minute": 600,
+  "enable_ddos_protection": true,
+  "ddos_anomaly_threshold_per_second": 200
 }
