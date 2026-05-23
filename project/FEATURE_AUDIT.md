@@ -1,291 +1,143 @@
 # Simple-NTPD Feature Audit Report
-**Date:** April 2026  
-**Purpose:** Comprehensive audit of implemented vs. stubbed features
+
+**Date:** May 2026  
+**Version:** v1.0.0  
+**Purpose:** Audit of implemented vs. planned features
 
 ## Executive Summary
 
-This audit examines the actual implementation status of features in simple-ntpd, distinguishing between fully implemented code, partially implemented features, and placeholder/stub implementations.
-
-**Overall Assessment:** The project has completed the v0.2.0 production milestone. Core NTP functionality is working with expanded validation, config/runtime controls, and observability.
+Simple NTP Daemon v1.0.0 delivers a working production NTP server for single-host deployments. Core protocol handling, upstream synchronization, configuration, logging, security controls, and operational CLI are implemented. Enterprise clustering, REST/Web UI, and formal compliance certification remain future work.
 
 ---
 
-## 1. Core NTP Protocol Features
+## 1. Core NTP Protocol
 
-### ✅ FULLY IMPLEMENTED
+### Fully implemented
 
-#### NTP Protocol (RFC 5905)
-- **NTP Packet Parsing** - ✅ Fully implemented
-  - Complete NTP packet structure parsing
-  - RFC 5905 compliant
-  - Timestamp extraction
-  - Packet validation
-- **NTP Packet Generation** - ✅ Fully implemented
-  - Complete packet generation with timestamps
-  - Proper field encoding
-  - Packet validation
-- **Connection Handling** - ✅ Fully implemented
-  - UDP socket server
-  - Client connection management
-  - Connection cleanup
-  - Multiple client support
+- **Packet handling (RFC 5905)** — explicit wire-format encode/decode for 48-byte packets
+- **UDP server** — bind, receive, respond on port 123
+- **Client connection tracking** — per-client stats and cleanup
+- **Upstream sync** — background queries, offset/stratum applied to responses
 
-#### Network Layer
-- **UDP Socket Handling** - ✅ Fully implemented
-  - UDP socket creation and binding
-  - Broadcast message handling
-  - Unicast message handling
-  - Network interface management
+### Partial / planned
+
+- Full RFC compliance certification test suite
+- NTS (Network Time Security)
+- IPv6 listener improvements
 
 ---
 
 ## 2. Configuration System
 
-### ✅ FULLY IMPLEMENTED
+### Fully implemented
 
-#### Configuration Formats
-- **JSON Configuration** - ✅ Fully implemented
-  - Complete parsing
-  - Validation
-  - Error reporting
-- **YAML Configuration** - ✅ Fully implemented
-  - Complete parsing
-  - Validation
-  - Error reporting
-- **INI Configuration** - ✅ Fully implemented
-  - Complete parsing
-  - Validation
-  - Error reporting
+- JSON, YAML, and INI parsing with validation
+- Environment variable overrides (`SIMPLE_NTPD_*`)
+- Hot reload via SIGHUP/SIGBREAK and filesystem mtime polling
+- Templates for development, production, and high-security profiles
 
-#### Configuration Features
-- **Configuration Validation** - ✅ Fully implemented
-  - Schema validation
-  - Value validation
-  - Error reporting
-- **Configuration Examples** - ✅ Fully implemented
-  - Simple configurations
-  - Advanced configurations
-  - Production configurations
-- **Hot Reloading** - ✅ **IMPLEMENTED** (v0.2.0)
-  - Signal-based reload support
-  - File-watch based reload trigger
-  - Validation before applying
+### Partial
+
+- Not all keys in example configs (e.g. `enterprise.conf`) are parsed yet — unknown keys are ignored
 
 ---
 
-## 3. Logging System
+## 3. Logging & Observability
 
-### ✅ FULLY IMPLEMENTED
+### Fully implemented
 
-**Status:** ✅ **100% Complete**
-
-- ✅ Structured JSON logging
-- ✅ Log levels (DEBUG, INFO, WARN, ERROR)
-- ✅ File and console output
-- ✅ Log rotation support
-- ✅ Configurable output formats
+- Structured JSON logging, rotation, syslog support
+- Prometheus metrics export via CLI
+- Health check report via CLI
+- Upstream sync status in metrics and health output
 
 ---
 
-## 4. Platform Support
+## 4. Security Features
 
-### ✅ FULLY IMPLEMENTED
+### Fully implemented (runtime)
 
-#### Platform Abstraction
-- **Platform Layer** - ✅ Fully implemented
-  - Cross-platform abstraction
-  - Platform-specific implementations
-  - Linux, macOS, Windows support
+- ACL / CIDR allow-deny enforcement
+- Rate limiting and DDoS anomaly thresholds
+- Authentication validation (OpenSSL digest checks)
+- TLS/certificate configuration validation at startup
 
-#### Build System
-- **CMake** - ✅ Fully implemented
-  - Multi-platform support
-  - Test integration
-  - Package generation
-- **Makefile** - ✅ Fully implemented
-  - Modular help system
-  - Comprehensive targets
-  - Platform-aware commands
+### Notes
+
+- Authentication is a simplified keyed-digest model, not full NTP MAC autokey
+- TLS config is validated but NTP remains UDP-based
 
 ---
 
-## 5. Docker Infrastructure
+## 5. Reliability Features
 
-### ✅ FULLY IMPLEMENTED
+### Fully implemented
 
-**Status:** ✅ **100% Complete**
-
-- ✅ Multi-stage Dockerfile
-- ✅ Multi-architecture support (x86_64, arm64, armv7)
-- ✅ Docker Compose configuration
-- ✅ Automated build script
-- ✅ Security best practices
-- ✅ Health checks
+- Upstream server selection (round-robin, random, least-errors fallback)
+- Self-healing socket restart attempts
+- State persistence and config backup hooks
+- Dynamic stratum adjustment based on error ratio
+- Graceful degradation mode
 
 ---
 
 ## 6. Testing
 
-### ⚠️ PARTIAL (60% Complete)
+### Implemented (8 CTest suites)
 
-**Test Files Found:**
-- `test_ntp_config.cpp`
-- `test_ntp_packet.cpp`
+| Test | Coverage |
+|------|----------|
+| `test_ntp_packet` | Packet parse/serialize, wire-format regression |
+| `test_ntp_config` | Configuration validation |
+| `test_ntp_integration` | In-memory request/response cycle |
+| `test_ntp_security` | Security config + CIDR helpers |
+| `test_ntp_performance` | Packet processing smoke benchmark |
+| `test_ntp_net` | IPv4 CIDR matching |
+| `test_ntp_udp` | Live UDP round-trip against local server |
+| `test_ntp_upstream` | Sync manager (offline); live with `SIMPLE_NTPD_NETWORK_TESTS=1` |
 
-**Coverage:**
-- ✅ Unit tests for core components
-- ⚠️ Integration tests exist but coverage unknown
-- ❌ Performance tests (not started)
-- ❌ Load tests (not started)
-- ⚠️ Server tests (partial)
+### Gaps
 
----
-
-## 7. Security Features
-
-### ❌ NOT IMPLEMENTED (v0.3.0)
-
-**Status:** ❌ **0% Complete** (Planned for v0.3.0)
-
-- ❌ NTP authentication (MD5, SHA-1, SHA-256)
-- ❌ Access control lists (ACL)
-- ❌ Rate limiting and DDoS protection
-- ❌ Certificate-based authentication
-
-**Verdict:** Security features are planned for v0.3.0, not yet implemented.
+- Code coverage still below 90% target
+- No load/stress test harness
+- Limited cross-platform CI matrix
 
 ---
 
-## 8. Monitoring & Observability
+## 7. Platform & Build
 
-### ✅ IMPLEMENTED (v0.2.0)
+### Fully implemented
 
-**Status:** ✅ **Delivered in v0.2.0**
-
-- ❌ Metrics collection (Prometheus format)
-- ❌ Health check endpoints
-- ❌ Performance monitoring
-- ❌ Enhanced logging with structured output
-
-**Verdict:** Monitoring features were implemented for v0.2.0 baseline and are ready for further expansion.
+- CMake + Makefile, CPack packaging hooks
+- Docker multi-stage builds
+- Linux, macOS builds verified; Windows CMake support present
 
 ---
 
-## 9. Performance Features
+## Completion Summary
 
-### ⚠️ BASIC IMPLEMENTATION
+| Area | Status |
+|------|--------|
+| Core NTP server | 95% |
+| Upstream sync | 90% |
+| Configuration | 95% |
+| Security controls | 85% |
+| Observability | 90% |
+| Testing | 70% |
+| Documentation | 85% |
 
-**Status:** ⚠️ **60% Complete**
-
-- ✅ Basic NTP server performance
-- ⚠️ Timestamp precision (basic, needs improvement)
-- ⚠️ Memory usage (basic optimization)
-- ❌ Performance monitoring (not implemented)
-- ❌ Load testing (not started)
-
-**Verdict:** Baseline runtime/performance improvements are in place; deeper benchmarking remains future work.
-
----
-
-## Critical Issues Found
-
-### 🟡 MEDIUM PRIORITY
-
-1. **Test Coverage Gaps**
-   - Unit test coverage ~40%
-   - Integration tests need expansion
-   - Performance tests needed
-   - Load tests needed
-
-2. **Performance Testing**
-   - No performance benchmarks
-   - No load testing
-   - No stress testing
-
-3. **Hot Configuration Reloading**
-   - Structure exists but not implemented
-   - Planned for v0.2.0
-
-### 🟢 LOW PRIORITY
-
-4. **Security Features**
-   - NTP authentication (v0.3.0)
-   - Access control (v0.3.0)
-   - Rate limiting (v0.3.0)
-
-5. **Monitoring Features**
-   - Metrics collection (v0.2.0)
-   - Health checks (v0.2.0)
-   - Performance monitoring (v0.2.0)
-
----
-
-## Revised Completion Estimates
-
-### Version 0.1.0
-- **Core NTP Protocol:** 95% ✅
-- **Configuration System:** 95% ✅
-- **Logging System:** 100% ✅
-- **Docker Infrastructure:** 100% ✅
-- **Testing:** 60% ⚠️
-- **Documentation:** 90% ✅
-
-**Overall v0.2.0:** complete (production milestone)
-
-### Version 0.2.0 Features
-- **Enhanced Validation:** Needs ~8-10 hours
-- **Performance Optimization:** Needs ~15-20 hours
-- **Dynamic Configuration Reloading:** Needs ~6-8 hours
-- **Monitoring & Metrics:** Needs ~12-16 hours
-
-### Version 0.3.0 Features
-- **NTP Authentication:** Needs ~20-30 hours
-- **Access Control:** Needs ~15-20 hours
-- **Rate Limiting:** Needs ~10-15 hours
+**Overall Production (v1.0.0):** suitable for single-server deployments with documented limitations above.
 
 ---
 
 ## Recommendations
 
-### Immediate Actions (v0.3.0)
-1. ✅ Core NTP protocol (DONE)
-2. ✅ Configuration system (DONE)
-3. ✅ Logging system (DONE)
-4. ✅ Docker infrastructure (DONE)
-5. 🔄 Expand test coverage (IN PROGRESS)
-6. 🔄 Performance testing (NEXT)
-
-### Short Term (v0.3.0 planning)
-1. Expand test coverage to 60%+
-2. Performance testing and benchmarking
-3. Documentation accuracy review
-4. Bug fixes from testing
-
-### Medium Term (v0.3.0)
-1. Enhanced packet validation
-2. Performance optimization
-3. Dynamic configuration reloading
-4. Monitoring and metrics
-
-### Long Term (v0.3.0)
-1. NTP authentication implementation
-2. Access control lists
-3. Rate limiting and DDoS protection
+1. Add load/stress benchmarks and document capacity numbers.
+2. Expand integration tests for ACL/auth rejection at runtime.
+3. Implement or document which enterprise.conf keys are aspirational vs. supported.
+4. Plan v0.4.0 enterprise features on a separate track.
 
 ---
 
-## Conclusion
-
-The project has **excellent core functionality** with a working NTP server. The main areas for improvement are:
-
-1. **Test coverage** - Need to expand to 60%+
-2. **Performance testing** - Load and stress testing needed
-3. **Production validation** - Real-world deployment testing
-
-**Bottom Line:** v0.2.0 is complete for the production milestone; next effort should target 0.3.0 security and reliability capabilities.
-
----
-
-*Audit completed: April 2026*  
-*Next review: v0.3.0 implementation checkpoint*
-
+*Audit completed: May 2026*  
+*Next review: v0.4.0 planning*

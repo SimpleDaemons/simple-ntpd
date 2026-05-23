@@ -2,9 +2,30 @@
 
 ## Overview
 
-This document summarizes all the development work completed on the Simple NTP Daemon project, including the major improvements and new features added.
+This document summarizes development work on the Simple NTP Daemon project.
 
-## Major Accomplishments
+## v1.0.0 Production Release (May 2026)
+
+### Upstream synchronization
+Background queries against configured NTP servers with clock offset and stratum tracking. Responses to downstream clients use synchronized time.
+
+### Operational tooling
+CLI commands for `status`, `stats`, `connections`, `metrics`, `health`, and config validation. Prometheus metrics include upstream sync gauges.
+
+### Test suite expansion
+Eight CTest targets including live UDP integration, CIDR network helpers, and upstream sync tests.
+
+### Post-release hardening
+- RFC 5905 wire-format packet encoding (fixes upstream sync with external servers)
+- Config watcher uses filesystem mtime (fixes macOS reload loop)
+- Gitignore scoped so `src/**/core` sources are tracked
+- Enterprise example config uses reliable upstream servers
+
+---
+
+## Earlier milestones
+
+## Earlier milestones
 
 ### 1. Modular Help System
 
@@ -212,26 +233,21 @@ make format
 
 ## Future Considerations
 
-### Immediate Next Steps
-- [ ] CI/CD integration using the Docker infrastructure
-- [ ] Automated testing in the Docker environment
-- [ ] Performance optimization for Docker builds
-- [ ] Additional security scanning tools
+### Post-1.0.0 priorities
+- [ ] Load/stress benchmarks and documented capacity
+- [ ] Cross-platform CI (Linux, macOS, Windows)
+- [ ] Formal security audit
+- [ ] Remove legacy duplicate source trees
 
-### Long-term Enhancements
+### v0.4.0 enterprise (planned)
 - [ ] Web-based management interface
-- [ ] SNMP monitoring support
-- [ ] Enhanced authentication features
-- [ ] Additional platform support
+- [ ] REST API and SNMP monitoring
+- [ ] High-availability clustering
 
 ## Conclusion
 
-The development work completed significantly improves the Simple NTP Daemon project by:
+As of **v1.0.0**, simple-ntpd is a production-ready single-server NTP daemon with upstream sync, security controls, operational CLI, and eight automated test suites. Remaining work centers on scale validation, enterprise features (v0.4.0), and documentation depth.
 
-1. **Modernizing the build system** with Docker-based cross-platform support
-2. **Improving developer experience** with a modular help system
-3. **Enhancing reliability** with better dependency management
-4. **Strengthening security** with comprehensive scanning capabilities
-5. **Providing better documentation** and usage examples
+---
 
-These improvements make the project more accessible, maintainable, and production-ready while following modern development best practices.
+*Last Updated: May 2026*

@@ -34,13 +34,24 @@ The Production track has reached **v1.0.0** with:
 | Area | Status |
 |------|--------|
 | NTP UDP server | Complete |
-| Upstream sync | Complete |
+| Upstream sync (`UpstreamSyncManager`) | Complete |
+| RFC 5905 wire-format packet encode/decode | Complete |
 | Config (INI/JSON/YAML) | Complete |
 | Security (ACL, auth, rate limit) | Complete |
 | Logging / metrics / health | Complete |
 | CLI (`start`, `status`, `stats`, `metrics`, `health`, `reload`, `connections`) | Complete |
+| Config hot-reload (SIGHUP + mtime watch) | Complete |
 | Tests (8 CTest suites) | Passing |
 | Packaging / Docker / deployment docs | Available |
+
+### Post-1.0.0 Hardening (May 2026)
+
+Production fixes landed after the initial v1.0.0 tag:
+
+- **Upstream sync sources tracked** — `.gitignore` no longer excludes `src/**/core` and `include/**/core`
+- **NTP packet wire format** — client/server packets use explicit RFC 5905 byte layout (fixes upstream query failures)
+- **Config watcher** — compares filesystem `mtime` on macOS instead of `system_clock::now()` (fixes reload loops)
+- **Enterprise example** — upstream list uses reliable public NTP servers
 
 ## Test Suite
 
@@ -48,7 +59,11 @@ The Production track has reached **v1.0.0** with:
 make test   # 8 tests: packet, config, integration, security, performance, net, udp, upstream
 ```
 
-Live upstream tests: `SIMPLE_NTPD_NETWORK_TESTS=1 ctest -R ntp_upstream`
+Live upstream tests (optional):
+
+```bash
+SIMPLE_NTPD_NETWORK_TESTS=1 ctest -R ntp_upstream
+```
 
 ## Remaining Work (post-1.0)
 
@@ -56,6 +71,7 @@ Live upstream tests: `SIMPLE_NTPD_NETWORK_TESTS=1 ctest -R ntp_upstream`
 - Extended load/stress benchmarks and formal security audit
 - Windows production validation
 - NTS (Network Time Security) and fuller RFC compliance certification
+- Generated API reference documentation
 
 ## Release Status
 

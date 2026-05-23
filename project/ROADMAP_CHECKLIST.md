@@ -214,12 +214,13 @@
   - [x] Multiple configuration formats (INI/JSON/YAML) implemented
 
 ### Week 5-6: Testing & Documentation
-- [ ] Write comprehensive test suite
-  - [x] Add unit tests for configuration and packet modules
-  - [ ] Add integration and end-to-end tests
-- [ ] Create deployment examples
-- [ ] Write troubleshooting guide
-- [ ] Update API documentation
+- [x] Core automated test suite (8 CTest targets)
+  - [x] Unit tests for configuration and packet modules
+  - [x] UDP integration test against live server
+  - [x] Upstream sync and network utility tests
+- [x] Deployment examples and production templates
+- [ ] Formal troubleshooting guide
+- [ ] Generated API reference
 
 ## Quality Gates
 
@@ -239,10 +240,11 @@
 
 ### Testing Quality
 - [x] All unit tests passing
-- [ ] Integration tests passing
-- [ ] Performance tests meeting targets
-- [ ] Security tests passing
+- [x] Integration tests passing (in-memory + UDP)
+- [x] Security config and CIDR tests passing
+- [x] Performance smoke tests passing
 - [ ] Cross-platform testing complete
+- [ ] Load/stress tests meeting targets
 
 ## Release Criteria
 
@@ -264,17 +266,25 @@
 - [x] Release notes prepared
 - [x] Community validation
 
-### Final Release (0.3.0)
-- [x] All quality gates passed
-- [x] Release artifacts created
-- [x] Announcement published
-- [x] Support channels ready
+### Final Release (1.0.0)
+- [x] Production feature set complete
+- [x] Upstream sync and operational CLI
+- [x] Eight automated test suites passing
+- [x] Release artifacts and documentation updated
+- [ ] Formal security audit (recommended post-release)
+
+## Post-1.0.0 Hardening ✅ COMPLETE
+
+- [x] RFC 5905 wire-format NTP packet serialization
+- [x] Config hot-reload mtime fix (macOS)
+- [x] Upstream sync sources tracked in repository
+- [x] Enterprise example upstream server list updated
 
 ## Progress Tracking
 
-**Overall Progress**: 85% (v1.0.0 production release complete)  
+**Overall Progress**: 88% (v1.0.0 production release complete)  
 **Next Milestone**: Version 0.4.0 (Enterprise features)  
-**Current Focus**: Enterprise planning; post-1.0 hardening as needed  
+**Current Focus**: Post-release hardening complete; enterprise planning next  
 
 ---
 

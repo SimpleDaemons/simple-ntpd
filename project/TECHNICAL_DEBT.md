@@ -1,335 +1,150 @@
 # Simple NTP Daemon - Technical Debt
 
 **Date:** May 2026  
-**Current Version:** 0.3.0  
+**Current Version:** 1.0.0  
 **Purpose:** Track technical debt, known issues, and areas requiring improvement
 
 ---
 
-## 🎯 Overview
+## Overview
 
-This document tracks technical debt, known issues, code quality improvements, and areas that need refactoring or enhancement in the simple-ntpd project. Items are prioritized by impact and urgency.
+Items below are prioritized by impact. Several v0.3.0 targets were addressed in v1.0.0; remaining work focuses on scale testing, documentation depth, and enterprise features.
 
-**Total Debt Items:** 12+  
-**Estimated Effort:** ~100-150 hours
+**Estimated remaining effort:** ~80–120 hours (excluding v0.4.0 enterprise scope)
 
 ---
 
-## 🔴 High Priority (Critical)
+## High Priority
 
-### 1. Test Coverage Expansion
-**Status:** ⚠️ **In Progress**  
-**Priority:** 🔴 **HIGH**  
-**Estimated Effort:** 30-40 hours
+### 1. Test coverage expansion
+**Status:** In progress  
+**Estimated effort:** 25–35 hours
 
-**Current State:**
-- Unit test coverage: ~40%
-- Integration tests: Partial coverage
-- Performance tests: Not started
-- Load tests: Not started
+**Current state:**
+- Eight CTest suites passing (unit, integration, UDP, security, performance smoke)
+- Code coverage ~40–50% (estimated)
+- No load/stress harness
+
+**Action items:**
+- [ ] Expand runtime tests for ACL/auth rejection paths
+- [ ] Target 60%+ unit coverage
+- [ ] Add soak test for long-running server stability
+- [ ] Cross-platform CI matrix (Linux, macOS, Windows)
+
+---
+
+### 2. Load and performance benchmarking
+**Status:** Partial (smoke tests only)  
+**Estimated effort:** 15–20 hours
+
+**Current state:**
+- `test_ntp_performance` validates packet loop throughput with a loose ceiling
+- No documented requests/sec capacity under concurrent clients
+
+**Action items:**
+- [ ] Define benchmark scenarios and acceptance thresholds
+- [ ] Run load tests with realistic client concurrency
+- [ ] Document results in `docs/production/performance.md`
+
+---
+
+### 3. Memory management review
+**Status:** Needs review  
+**Estimated effort:** 6–10 hours
+
+**Action items:**
+- [ ] Run AddressSanitizer builds in CI (`SIMPLE_NTPD_ENABLE_ASAN=ON`)
+- [ ] Profile memory during extended uptime
+- [ ] Verify connection/rate-limit map growth is bounded
+
+---
+
+## Medium Priority
+
+### 4. Configuration schema completeness
+**Status:** Partial  
+**Estimated effort:** 8–12 hours
 
 **Issues:**
-- Missing tests for core NTP functionality
-- Missing tests for configuration system
-- No performance benchmarks
-- No load/stress testing
+- Example configs (especially `enterprise.conf`) contain keys not yet parsed
+- Users may assume unsupported keys are active
 
-**Impact:**
-- Risk of regressions in production
-- Difficult to validate performance claims
-- Unknown behavior under load
-
-**Action Items:**
-- [ ] Expand unit test coverage to 60%+
-- [ ] Add integration tests for NTP protocol
-- [ ] Add tests for configuration system
-- [ ] Create performance test suite
-- [ ] Implement load testing framework
-
-**Target:** v0.3.0 release
+**Action items:**
+- [ ] Document supported vs. aspirational config keys
+- [ ] Warn on unknown keys at parse time (optional strict mode)
+- [ ] Align enterprise example with implemented options
 
 ---
 
-### 2. Performance Testing
-**Status:** ❌ **Not Started**  
-**Priority:** 🔴 **HIGH**  
-**Estimated Effort:** 15-20 hours
+### 5. Code and API documentation
+**Status:** Partial  
+**Estimated effort:** 10–15 hours
 
-**Current State:**
-- No performance benchmarks
-- No load testing
-- No stress testing
+**Action items:**
+- [ ] Complete header documentation for public interfaces
+- [ ] Generate API reference (Doxygen or similar)
+- [ ] Add troubleshooting guide for common production issues
+
+---
+
+### 6. Duplicate legacy source trees
+**Status:** Open  
+**Estimated effort:** 4–8 hours
 
 **Issues:**
-- Unknown performance characteristics
-- No load capacity information
-- No stress test results
+- Legacy mirrors exist under `src/core/` and `include/simple-ntpd/core/{config,ntp,utils}/`
+- CMake builds only `src/simple-ntpd/` — duplicates cause confusion
 
-**Impact:**
-- Cannot validate performance claims
-- Unknown behavior under load
-- Risk of performance issues in production
-
-**Action Items:**
-- [ ] Create performance test suite
-- [ ] Implement load testing framework
-- [ ] Run stress tests
-- [ ] Document performance characteristics
-
-**Target:** v0.2.0 release
+**Action items:**
+- [ ] Remove or clearly archive legacy mirrored sources
+- [ ] Update contributor docs with canonical paths
 
 ---
 
-### 3. Memory Management Review
-**Status:** ⚠️ **Needs Review**  
-**Priority:** 🔴 **HIGH**  
-**Estimated Effort:** 6-10 hours
+## Low Priority
 
-**Current State:**
-- No systematic memory leak detection
-- No memory profiling
-- Potential memory leaks in long-running operations
+### 7. CLI polish
+**Status:** Partial  
+**Estimated effort:** 4–6 hours
 
 **Issues:**
-- Memory leaks could cause server degradation
-- No memory usage monitoring
-- Potential issues with connection management
+- Duplicate startup log lines from `main` and `NtpServer::start`
+- `stop`/`restart` delegate to service manager messaging
 
-**Impact:**
-- Server performance degradation over time
-- Potential crashes under load
-- Resource exhaustion
-
-**Action Items:**
-- [ ] Run memory leak detection tools
-- [ ] Profile memory usage
-- [ ] Fix identified memory leaks
-- [ ] Add memory usage monitoring
-
-**Target:** v0.3.0 release
+**Action items:**
+- [ ] Deduplicate startup logging
+- [ ] Consider pid-file based stop/status for standalone deployments
 
 ---
 
-## 🟡 Medium Priority (Important)
+### 8. Authentication model
+**Status:** Functional but simplified  
+**Estimated effort:** 20–30 hours (if full NTP MAC required)
 
-### 4. Code Documentation
-**Status:** ⚠️ **Partial**  
-**Priority:** 🟡 **MEDIUM**  
-**Estimated Effort:** 10-15 hours
-
-**Current State:**
-- Some functions lack documentation
-- Inconsistent documentation style
-- Missing parameter documentation
-
-**Issues:**
-- Difficult for new developers to understand code
-- Incomplete API documentation
-- Missing usage examples
-
-**Impact:**
-- Slower onboarding for new developers
-- Difficult to maintain code
-- Potential misuse of APIs
-
-**Action Items:**
-- [ ] Add missing function documentation
-- [ ] Standardize documentation style
-- [ ] Add parameter documentation
-- [ ] Create API documentation
-
-**Target:** v0.2.0 release
+**Notes:** Current auth uses OpenSSL digests over packet bytes; not interchangeable with ntpd/chrony key files.
 
 ---
 
-### 5. Error Handling Improvements
-**Status:** ⚠️ **Needs Enhancement**  
-**Priority:** 🟡 **MEDIUM**  
-**Estimated Effort:** 8-12 hours
+## Resolved since v0.3.0
 
-**Current State:**
-- Basic error handling implemented
-- Some error cases not handled
-- Inconsistent error reporting
-
-**Issues:**
-- Some error cases may cause crashes
-- Error messages not always clear
-- Missing error recovery mechanisms
-
-**Impact:**
-- Potential server crashes
-- Poor user experience
-- Difficult troubleshooting
-
-**Action Items:**
-- [ ] Review all error handling paths
-- [ ] Add missing error handling
-- [ ] Improve error messages
-- [ ] Add error recovery mechanisms
-
-**Target:** v0.2.0 release
+| Item | Resolution |
+|------|------------|
+| Upstream sync missing from repo | Gitignore fix + `upstream_sync` module committed |
+| Upstream queries failed | RFC 5905 wire-format packet fix |
+| Config reload loop on macOS | Filesystem mtime watcher fix |
+| No UDP integration test | `test_ntp_udp` added |
+| Security features "not implemented" | Runtime ACL/auth/rate-limit confirmed in audit |
 
 ---
 
-### 6. Configuration Validation
-**Status:** ⚠️ **Partial**  
-**Priority:** 🟡 **MEDIUM**  
-**Estimated Effort:** 6-10 hours
+## Next steps
 
-**Current State:**
-- Basic configuration validation
-- Some invalid configurations not caught
-- Missing validation for some options
-
-**Issues:**
-- Invalid configurations may cause runtime errors
-- Missing validation for edge cases
-- Inconsistent validation messages
-
-**Impact:**
-- Runtime errors from invalid config
-- Poor user experience
-- Difficult troubleshooting
-
-**Action Items:**
-- [ ] Expand configuration validation
-- [ ] Add validation for all options
-- [ ] Improve validation error messages
-- [ ] Add configuration schema documentation
-
-**Target:** v0.2.0 release
+1. Load/soak testing and documented capacity numbers
+2. Config schema documentation and unknown-key warnings
+3. Remove legacy source mirrors
+4. Begin v0.4.0 enterprise planning (separate track)
 
 ---
 
-## 🟢 Low Priority (Nice to Have)
-
-### 7. Code Refactoring
-**Status:** ✅ **In Progress**  
-**Priority:** 🟢 **LOW**  
-**Estimated Effort:** 15-20 hours
-
-**Current State:**
-- Code reorganization completed
-- Some code duplication remains
-- Some functions could be simplified
-
-**Issues:**
-- Code duplication in some areas
-- Some functions are too complex
-- Could benefit from additional abstraction
-
-**Impact:**
-- Maintenance burden
-- Potential for bugs
-- Slower development
-
-**Action Items:**
-- [ ] Remove code duplication
-- [ ] Simplify complex functions
-- [ ] Add additional abstractions
-- [ ] Improve code organization
-
-**Target:** v0.3.0 release
-
----
-
-### 8. Logging Improvements
-**Status:** ⚠️ **Needs Enhancement**  
-**Priority:** 🟢 **LOW**  
-**Estimated Effort:** 6-10 hours
-
-**Current State:**
-- Basic logging implemented
-- Some operations not logged
-- Log levels could be improved
-
-**Issues:**
-- Missing logs for some operations
-- Inconsistent log levels
-- Could benefit from structured logging
-
-**Impact:**
-- Difficult troubleshooting
-- Missing audit trail
-- Poor observability
-
-**Action Items:**
-- [ ] Add missing log statements
-- [ ] Standardize log levels
-- [ ] Add structured logging
-- [ ] Improve log formatting
-
-**Target:** v0.3.0 release
-
----
-
-### 9. Performance Optimization
-**Status:** ❌ **Not Started**  
-**Priority:** 🟢 **LOW**  
-**Estimated Effort:** 20-30 hours
-
-**Current State:**
-- Basic performance optimizations
-- No profiling done
-- Unknown performance bottlenecks
-
-**Issues:**
-- Performance not optimized
-- Unknown bottlenecks
-- Could benefit from optimization
-
-**Impact:**
-- Suboptimal performance
-- Higher resource usage
-- Slower response times
-
-**Action Items:**
-- [ ] Profile performance
-- [ ] Identify bottlenecks
-- [ ] Optimize critical paths
-- [ ] Add performance monitoring
-
-**Target:** v0.3.0 release
-
----
-
-## 📋 Summary
-
-### By Priority
-- **High Priority:** 3 items (~51-70 hours)
-- **Medium Priority:** 3 items (~24-37 hours)
-- **Low Priority:** 3 items (~41-60 hours)
-
-### By Status
-- **In Progress:** 2 items
-- **Not Started:** 2 items
-- **Needs Review/Enhancement:** 5 items
-
-### Total Estimated Effort
-**~100-150 hours** across all priority levels
-
----
-
-## 🎯 Next Steps
-
-1. **Immediate (v0.3.0):**
-   - Expand test coverage
-   - Review memory management
-   - Add missing error handling
-
-2. **Short Term (v0.3.0):**
-   - Performance testing
-   - Code documentation
-   - Configuration validation
-
-3. **Long Term (v0.3.0):**
-   - Code refactoring
-   - Logging improvements
-   - Performance optimization
-
----
-
-*Last Updated: April 2026*  
-*Next Review: Prior to v0.3.0 implementation start*
-
+*Last Updated: May 2026*  
+*Next Review: v0.4.0 planning*

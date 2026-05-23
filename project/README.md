@@ -2,30 +2,40 @@
 
 This directory contains project management, development, and internal documentation for the Simple NTP Daemon project.
 
-## 📋 Document Organization
+**Current version:** v1.0.0 (Production release, May 2026)
+
+## Document Organization
 
 ### Project Status & Progress
-- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Overall project status, completion metrics, and health indicators
-- **[PROGRESS_REPORT.md](PROGRESS_REPORT.md)** - Detailed progress report with honest assessment of what works and what's pending
-- **[DEVELOPMENT_SUMMARY.md](DEVELOPMENT_SUMMARY.md)** - Development summary and progress tracking
+- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** — Overall status, feature matrix, test commands
+- **[PROGRESS_REPORT.md](PROGRESS_REPORT.md)** — Milestone history and current gaps
+- **[DEVELOPMENT_SUMMARY.md](DEVELOPMENT_SUMMARY.md)** — Development timeline and accomplishments
 
 ### Implementation & Features
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Summary of recent improvements and feature completions
-- **[FEATURE_AUDIT.md](FEATURE_AUDIT.md)** - Comprehensive audit of implemented vs. stubbed features
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** — v1.0.0 features and post-release hardening
+- **[FEATURE_AUDIT.md](FEATURE_AUDIT.md)** — Implemented vs. planned feature audit
 
-### Planning & Roadmap
-- **[ROADMAP.md](../ROADMAP.md)** - Development roadmap and future plans (in project root for visibility)
-- **[ROADMAP_CHECKLIST.md](ROADMAP_CHECKLIST.md)** - Detailed checklist tracking roadmap items
+### Planning & Quality
+- **[ROADMAP_CHECKLIST.md](ROADMAP_CHECKLIST.md)** — Version checklist and quality gates
+- **[TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)** — Known issues and remaining work
+- **[ROADMAP.md](../ROADMAP.md)** — Public roadmap (project root)
 
-## 📚 User Documentation
+## Quick reference
 
-For user-facing documentation (installation, configuration, usage guides), see the **[docs/](../docs/)** directory.
+```bash
+make test                    # 8 CTest suites
+./build/simple-ntpd --version
+./build/simple-ntpd health --config <file>
+```
 
-## 📝 Project History
+## User documentation
 
-For version history and changes, see **[CHANGELOG.md](../CHANGELOG.md)** in the project root.
+User-facing guides live in **[docs/](../docs/)**.
+
+## Version history
+
+See **[CHANGELOG.md](../CHANGELOG.md)** in the project root.
 
 ---
 
-*This directory is for internal project management. User documentation is located in the `docs/` directory.*
-
+*Internal project management docs. Last updated: May 2026.*
