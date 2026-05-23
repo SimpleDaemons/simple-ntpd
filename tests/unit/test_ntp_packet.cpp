@@ -139,6 +139,10 @@ private:
       assert(packet.version == NTP_VERSION);
       assert(packet.stratum == 0);
       assert(packet.isValid());
+      const auto wire = packet.serializeToData();
+      assert(wire.size() == NTP_PACKET_SIZE);
+      // RFC 5905: LI=0, VN=4, Mode=3 (client) => 0x23
+      assert(wire[0] == 0x23);
       return true;
     } catch (...) {
       return false;

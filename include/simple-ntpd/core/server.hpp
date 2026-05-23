@@ -18,6 +18,9 @@
 #include <functional>
 #include <random>
 #include <unordered_map>
+#if __has_include(<filesystem>)
+#include <filesystem>
+#endif
 #include <memory>
 #include <mutex>
 #include <netinet/in.h>
@@ -291,7 +294,12 @@ private:
   // Config watching
   std::thread config_watch_thread_;
   std::atomic<bool> config_watch_running_;
-  std::chrono::system_clock::time_point config_last_write_time_;
+#if __has_include(<filesystem>)
+  std::filesystem::file_time_type config_last_mtime_{};
+#else
+  std::time_t config_last_mtime_{0};
+#endif
+  bool config_mtime_initialized_{false};
   void startConfigWatcher();
   void stopConfigWatcher();
   void configWatcherLoop();

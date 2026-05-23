@@ -17,6 +17,9 @@
 #include <fstream>
 #include <sstream>
 #include <thread>
+#if !__has_include(<filesystem>)
+#include <sys/stat.h>
+#endif
 #if __has_include(<filesystem>)
 #include <filesystem>
 #endif
@@ -42,7 +45,7 @@ NtpServer::NtpServer(std::shared_ptr<NtpConfig> config,
       connections_mutex_(), accept_thread_(), worker_threads_(),
       workers_running_(false),
       config_watch_thread_(), config_watch_running_(false),
-      config_last_write_time_(),
+      config_mtime_initialized_(false),
       stats_(), stats_mutex_(),
       config_change_callback_(),
       last_cleanup_time_(std::chrono::steady_clock::now()),
@@ -249,8 +252,21 @@ void NtpServer::startConfigWatcher() {
     return;
   }
 
-  // Initialize last write time to current so we only react to future changes
-  config_last_write_time_ = std::chrono::system_clock::now();
+#if __has_include(<filesystem>)
+  try {
+    config_last_mtime_ = std::filesystem::last_write_time(cfg_path);
+    config_mtime_initialized_ = true;
+  } catch (...) {
+    config_mtime_initialized_ = false;
+  }
+#else
+  struct stat st {};
+  if (stat(cfg_path.c_str(), &st) == 0) {
+    config_last_mtime_ = st.st_mtime;
+    config_mtime_initialized_ = true;
+  }
+#endif
+
   config_watch_running_ = true;
   config_watch_thread_ = std::thread(&NtpServer::configWatcherLoop, this);
 }
@@ -272,27 +288,37 @@ void NtpServer::configWatcherLoop() {
   while (config_watch_running_) {
     std::this_thread::sleep_for(2s);
 
-    // Portable mtime polling using std::filesystem if available
 #if __has_include(<filesystem>)
     try {
       namespace fs = std::filesystem;
-      auto current_write = fs::last_write_time(fs::path(cfg_path));
-      // Convert file_time_type to system_clock::time_point for comparison
-#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
-      auto current_sys = std::chrono::clock_cast<std::chrono::system_clock>(current_write);
-#else
-      (void)current_write;
-      auto current_sys = std::chrono::system_clock::now(); // Fallback: trigger reload only once
-#endif
-      if (config_last_write_time_.time_since_epoch().count() == 0) {
-        config_last_write_time_ = current_sys;
-      } else if (current_sys > config_last_write_time_) {
+      const auto current_mtime = fs::last_write_time(fs::path(cfg_path));
+      if (!config_mtime_initialized_) {
+        config_last_mtime_ = current_mtime;
+        config_mtime_initialized_ = true;
+        continue;
+      }
+      if (current_mtime != config_last_mtime_) {
         logger_->info("Config file modification detected, reloading");
-        config_last_write_time_ = current_sys;
+        config_last_mtime_ = current_mtime;
         reloadConfig();
       }
     } catch (...) {
-      // Ignore polling errors
+      // Ignore polling errors (file removed, permissions, etc.)
+    }
+#else
+    struct stat st {};
+    if (stat(cfg_path.c_str(), &st) != 0) {
+      continue;
+    }
+    if (!config_mtime_initialized_) {
+      config_last_mtime_ = st.st_mtime;
+      config_mtime_initialized_ = true;
+      continue;
+    }
+    if (st.st_mtime != config_last_mtime_) {
+      logger_->info("Config file modification detected, reloading");
+      config_last_mtime_ = st.st_mtime;
+      reloadConfig();
     }
 #endif
   }

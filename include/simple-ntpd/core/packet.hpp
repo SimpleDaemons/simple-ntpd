@@ -56,13 +56,13 @@ struct NtpTimestamp {
  * Represents a complete NTP packet according to RFC 5905
  */
 struct NtpPacket {
-  // First word (32 bits)
-  uint8_t leap_indicator : 2; // Leap indicator
-  uint8_t version : 3;        // Version number
-  uint8_t mode : 3;           // Mode
-  uint8_t stratum;            // Stratum level
-  uint8_t poll;               // Poll interval
-  int8_t precision;           // Precision
+  // RFC 5905 header (first 4 bytes)
+  uint8_t leap_indicator;
+  uint8_t version;
+  uint8_t mode;
+  uint8_t stratum;
+  uint8_t poll;
+  int8_t precision;
 
   // Second word (32 bits)
   uint32_t root_delay;      // Root delay

@@ -26,6 +26,34 @@
 
 namespace simple_ntpd {
 
+namespace {
+
+uint32_t readU32Be(const uint8_t *p) {
+  return (static_cast<uint32_t>(p[0]) << 24) |
+         (static_cast<uint32_t>(p[1]) << 16) |
+         (static_cast<uint32_t>(p[2]) << 8) |
+         static_cast<uint32_t>(p[3]);
+}
+
+void writeU32Be(uint8_t *p, uint32_t value) {
+  p[0] = static_cast<uint8_t>((value >> 24) & 0xFF);
+  p[1] = static_cast<uint8_t>((value >> 16) & 0xFF);
+  p[2] = static_cast<uint8_t>((value >> 8) & 0xFF);
+  p[3] = static_cast<uint8_t>(value & 0xFF);
+}
+
+void readTimestamp(const uint8_t *p, NtpTimestamp &ts) {
+  ts.seconds = readU32Be(p);
+  ts.fraction = readU32Be(p + 4);
+}
+
+void writeTimestamp(uint8_t *p, const NtpTimestamp &ts) {
+  writeU32Be(p, ts.seconds);
+  writeU32Be(p + 4, ts.fraction);
+}
+
+} // namespace
+
 // NtpPacket implementation
 NtpPacket::NtpPacket() {
   // Initialize all fields to zero/default values
@@ -99,49 +127,46 @@ bool NtpPacket::parseFromData(const std::vector<uint8_t> &data) {
     return false;
   }
 
-  // Copy data to packet structure
-  std::memcpy(this, data.data(), NTP_PACKET_SIZE);
+  const uint8_t first_byte = data[0];
+  leap_indicator = (first_byte >> 6) & 0x3;
+  version = (first_byte >> 3) & 0x7;
+  mode = first_byte & 0x7;
+  stratum = data[1];
+  poll = data[2];
+  precision = static_cast<int8_t>(data[3]);
 
-  // Convert from network byte order
-  root_delay = ntohl(root_delay);
-  root_dispersion = ntohl(root_dispersion);
-  reference_id = ntohl(reference_id);
+  root_delay = readU32Be(&data[4]);
+  root_dispersion = readU32Be(&data[8]);
+  reference_id = readU32Be(&data[12]);
 
-  // Convert timestamps from network byte order
-  reference_ts.seconds = ntohl(reference_ts.seconds);
-  reference_ts.fraction = ntohl(reference_ts.fraction);
-  originate_ts.seconds = ntohl(originate_ts.seconds);
-  originate_ts.fraction = ntohl(originate_ts.fraction);
-  receive_ts.seconds = ntohl(receive_ts.seconds);
-  receive_ts.fraction = ntohl(receive_ts.fraction);
-  transmit_ts.seconds = ntohl(transmit_ts.seconds);
-  transmit_ts.fraction = ntohl(transmit_ts.fraction);
+  readTimestamp(&data[16], reference_ts);
+  readTimestamp(&data[24], originate_ts);
+  readTimestamp(&data[32], receive_ts);
+  readTimestamp(&data[40], transmit_ts);
 
   return true;
 }
 
 std::vector<uint8_t> NtpPacket::serializeToData() const {
-  std::vector<uint8_t> data(NTP_PACKET_SIZE);
+  std::vector<uint8_t> data(NTP_PACKET_SIZE, 0);
 
-  // Create a copy for serialization
-  NtpPacket packet_copy = *this;
+  const uint8_t first_byte =
+      static_cast<uint8_t>(((leap_indicator & 0x3) << 6) |
+                           ((version & 0x7) << 3) | (mode & 0x7));
+  data[0] = first_byte;
+  data[1] = stratum;
+  data[2] = poll;
+  data[3] = static_cast<uint8_t>(precision);
 
-  // Convert to network byte order
-  packet_copy.root_delay = htonl(packet_copy.root_delay);
-  packet_copy.root_dispersion = htonl(packet_copy.root_dispersion);
-  packet_copy.reference_id = htonl(packet_copy.reference_id);
+  writeU32Be(&data[4], root_delay);
+  writeU32Be(&data[8], root_dispersion);
+  writeU32Be(&data[12], reference_id);
 
-  // Convert timestamps to network byte order
-  packet_copy.reference_ts.seconds = htonl(packet_copy.reference_ts.seconds);
-  packet_copy.reference_ts.fraction = htonl(packet_copy.reference_ts.fraction);
-  packet_copy.originate_ts.seconds = htonl(packet_copy.originate_ts.seconds);
-  packet_copy.originate_ts.fraction = htonl(packet_copy.originate_ts.fraction);
-  packet_copy.receive_ts.seconds = htonl(packet_copy.receive_ts.seconds);
-  packet_copy.receive_ts.fraction = htonl(packet_copy.receive_ts.fraction);
-  packet_copy.transmit_ts.seconds = htonl(packet_copy.transmit_ts.seconds);
-  packet_copy.transmit_ts.fraction = htonl(packet_copy.transmit_ts.fraction);
+  writeTimestamp(&data[16], reference_ts);
+  writeTimestamp(&data[24], originate_ts);
+  writeTimestamp(&data[32], receive_ts);
+  writeTimestamp(&data[40], transmit_ts);
 
-  std::memcpy(data.data(), &packet_copy, NTP_PACKET_SIZE);
   return data;
 }
 
