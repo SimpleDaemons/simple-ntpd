@@ -1,5 +1,8 @@
 # Simple NTP Daemon - Development Roadmap
 
+
+**Honesty note:** Prefer [project/PROGRESS_REPORT.md](project/PROGRESS_REPORT.md) when phase checkmarks may be historical. Item-level tracking: [project/ROADMAP_CHECKLIST.md](project/ROADMAP_CHECKLIST.md). Overview: [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
+
 ## Project Overview
 Simple NTP Daemon (simple-ntpd) is a lightweight, secure, and easy-to-configure NTP server implementation that maintains compatibility with the NTP protocol (RFC 5905). This document outlines the development roadmap for future versions and features.
 

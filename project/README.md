@@ -19,6 +19,13 @@ This directory contains project management, development, and internal documentat
 - **[ROADMAP_CHECKLIST.md](ROADMAP_CHECKLIST.md)** — Version checklist and quality gates
 - **[TECHNICAL_DEBT.md](TECHNICAL_DEBT.md)** — Known issues and remaining work
 - **[ROADMAP.md](../ROADMAP.md)** — Public roadmap (project root)
+- **[../PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md)** — Short executive overview
+
+### Release
+- **[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)** — Pre/post-release steps
+- **[../RELEASING.md](../RELEASING.md)** — Tag and publish how-to
+- **[../VERSIONING.md](../VERSIONING.md)** — SemVer policy
+- **[../CHANGELOG.md](../CHANGELOG.md)** — Release history
 
 ## Quick reference
 
