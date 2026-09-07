@@ -240,3 +240,7 @@ venv/
 node_modules/
 npm-debug.log*
 *.lock
+include/simple-ntpd/core/config/
+include/simple-ntpd/core/ntp/
+include/simple-ntpd/core/utils/
+src/core/
