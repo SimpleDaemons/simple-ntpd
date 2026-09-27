@@ -143,7 +143,7 @@ bool parseCommandLine(int argc, char *argv[],
       if (i + 1 < argc) {
         try {
           config->listen_port = static_cast<port_t>(std::stoi(argv[++i]));
-        } catch (const std::exception &e) {
+        } catch (const std::exception &) {
           std::cerr << "Error: Invalid port number: " << argv[i] << std::endl;
           return false;
         }
@@ -161,7 +161,7 @@ bool parseCommandLine(int argc, char *argv[],
             std::cerr << "Error: Stratum must be between 1 and 15" << std::endl;
             return false;
           }
-        } catch (const std::exception &e) {
+        } catch (const std::exception &) {
           std::cerr << "Error: Invalid stratum level: " << argv[i] << std::endl;
           return false;
         }
@@ -262,7 +262,9 @@ bool parseCommandLine(int argc, char *argv[],
 void initializeSignalHandlers() {
   signal(SIGINT, signalHandler);
   signal(SIGTERM, signalHandler);
+#ifndef _WIN32
   signal(SIGQUIT, signalHandler);
+#endif
 
 #ifdef _WIN32
   // On Windows, use SIGBREAK (Ctrl+Break) to trigger config reload

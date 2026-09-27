@@ -107,8 +107,8 @@ constexpr size_t NTP_MAX_PACKET_SIZE = 1024;
 constexpr size_t NTP_VERSION = 4;
 constexpr size_t NTP_STRATUM_MAX = 15;
 constexpr size_t NTP_REFERENCE_ID_LENGTH = 4;
-constexpr size_t NTP_ROOT_DELAY_SCALE = 2.0;      // 2^-16 seconds
-constexpr size_t NTP_ROOT_DISPERSION_SCALE = 2.0; // 2^-16 seconds
+constexpr size_t NTP_ROOT_DELAY_SCALE = 2;      // units of 2^-16 seconds
+constexpr size_t NTP_ROOT_DISPERSION_SCALE = 2; // units of 2^-16 seconds
 
 // NTP packet field sizes
 constexpr size_t NTP_LEAP_INDICATOR_BITS = 2;
