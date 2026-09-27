@@ -64,6 +64,9 @@ target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib)
 target_link_libraries(${PROJECT_NAME} Threads::Threads)
 
 if(ENABLE_SSL)
+    # Headers live outside the default search path on MacPorts. The library
+    # compiles the sources that include them; the executable only links.
+    target_link_libraries(${PROJECT_NAME}_lib PRIVATE OpenSSL::SSL OpenSSL::Crypto)
     target_link_libraries(${PROJECT_NAME} OpenSSL::SSL OpenSSL::Crypto)
 endif()
 
