@@ -30,8 +30,8 @@
 #endif
 #ifndef _WIN32
 #include <syslog.h>
-#endif
 #include <arpa/inet.h>
+#endif
 
 namespace simple_ntpd {
 
@@ -395,7 +395,8 @@ void NtpServer::processIncomingPackets() {
     std::memset(&client_addr, 0, sizeof(client_addr));
 
     ssize_t bytes_received = recvfrom(
-        server_socket_, buffer.data(), buffer.size(), 0,
+        server_socket_, reinterpret_cast<char *>(buffer.data()),
+        static_cast<int>(buffer.size()), 0,
         reinterpret_cast<struct sockaddr *>(&client_addr), &client_addr_len);
 
     if (bytes_received < 0) {
@@ -506,9 +507,10 @@ void NtpServer::processPacket(const std::vector<uint8_t> &data,
     }
     auto response_data = response_packet.serializeToData();
     ssize_t bytes_sent = sendto(
-        server_socket_, response_data.data(), response_data.size(), 0,
+        server_socket_, reinterpret_cast<const char *>(response_data.data()),
+        static_cast<int>(response_data.size()), 0,
         reinterpret_cast<const struct sockaddr *>(&client_addr),
-        sizeof(client_addr));
+        static_cast<int>(sizeof(client_addr)));
     if (bytes_sent < 0) {
       logger_->error("Failed to send NTP response to " + std::string(client_ip) +
                      ":" + std::to_string(client_port) + ": " +

@@ -162,7 +162,8 @@ ssize_t NtpConnection::readFromSocket(std::vector<uint8_t> &buffer,
   }
 
   buffer.resize(max_size);
-  ssize_t bytes_read = recv(client_socket_, buffer.data(), buffer.size(), 0);
+  ssize_t bytes_read = recv(client_socket_, reinterpret_cast<char *>(buffer.data()),
+                             static_cast<int>(buffer.size()), 0);
 
   if (bytes_read < 0) {
     logger_->error("Failed to read from socket: " +
@@ -179,7 +180,8 @@ bool NtpConnection::writeToSocket(const std::vector<uint8_t> &data) {
     return false;
   }
 
-  ssize_t bytes_sent = send(client_socket_, data.data(), data.size(), 0);
+  ssize_t bytes_sent = send(client_socket_, reinterpret_cast<const char *>(data.data()),
+                             static_cast<int>(data.size()), 0);
 
   if (bytes_sent < 0) {
     logger_->error("Failed to write to socket: " +

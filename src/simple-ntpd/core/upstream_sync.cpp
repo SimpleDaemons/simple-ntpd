@@ -3,9 +3,11 @@
  * @brief Upstream NTP synchronization
  */
 
+#ifndef _WIN32
 #include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#endif
 
 #include "simple-ntpd/core/upstream_sync.hpp"
 #include "simple-ntpd/core/packet.hpp"
@@ -25,11 +27,19 @@ socket_t createUdpSocket(std::chrono::milliseconds timeout) {
   }
 
   const auto ms = static_cast<int>(timeout.count());
+#ifdef _WIN32
+  const DWORD timeout_ms = static_cast<DWORD>(ms > 0 ? ms : 0);
+  setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,
+             reinterpret_cast<const char *>(&timeout_ms), sizeof(timeout_ms));
+  setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO,
+             reinterpret_cast<const char *>(&timeout_ms), sizeof(timeout_ms));
+#else
   struct timeval tv {};
   tv.tv_sec = ms / 1000;
   tv.tv_usec = (ms % 1000) * 1000;
   setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+#endif
   return sock;
 }
 
@@ -65,8 +75,9 @@ UpstreamSyncResult queryUpstreamServer(const std::string &host,
     if (ai->ai_family != AF_INET) {
       continue;
     }
-    ssize_t sent = sendto(sock, request_data.data(), request_data.size(), 0,
-                          ai->ai_addr, ai->ai_addrlen);
+    ssize_t sent = sendto(sock, reinterpret_cast<const char *>(request_data.data()),
+                          static_cast<int>(request_data.size()), 0, ai->ai_addr,
+                          static_cast<int>(ai->ai_addrlen));
     if (sent == static_cast<ssize_t>(request_data.size())) {
       sent_any = true;
       break;
@@ -82,7 +93,8 @@ UpstreamSyncResult queryUpstreamServer(const std::string &host,
   struct sockaddr_in from_addr {};
   socklen_t from_len = sizeof(from_addr);
   const ssize_t received =
-      recvfrom(sock, buffer.data(), buffer.size(), 0,
+      recvfrom(sock, reinterpret_cast<char *>(buffer.data()),
+               static_cast<int>(buffer.size()), 0,
                reinterpret_cast<struct sockaddr *>(&from_addr), &from_len);
   CLOSE_SOCKET(sock);
 

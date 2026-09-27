@@ -13,7 +13,6 @@
 #include "simple-ntpd/core/connection.hpp"
 #include "simple-ntpd/core/upstream_sync.hpp"
 #include "simple-ntpd/utils/platform.hpp"
-#include <arpa/inet.h>
 #include <atomic>
 #include <functional>
 #include <random>
@@ -23,7 +22,6 @@
 #endif
 #include <memory>
 #include <mutex>
-#include <netinet/in.h>
 #include <string>
 #include <thread>
 #include <vector>

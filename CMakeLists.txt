@@ -88,6 +88,12 @@ if(ENABLE_JSON)
 endif()
 
 # Compiler-specific options
+if(WIN32)
+    target_compile_definitions(${PROJECT_NAME}_lib PUBLIC
+        _CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN)
+    target_link_libraries(${PROJECT_NAME}_lib PUBLIC ws2_32)
+endif()
+
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
     if(ENABLE_STATIC_LINKING)

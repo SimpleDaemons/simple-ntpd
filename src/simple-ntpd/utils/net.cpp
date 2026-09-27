@@ -4,7 +4,7 @@
  */
 
 #include "simple-ntpd/utils/net.hpp"
-#include <arpa/inet.h>
+#include "simple-ntpd/utils/platform.hpp"
 #include <cstdint>
 
 namespace simple_ntpd {

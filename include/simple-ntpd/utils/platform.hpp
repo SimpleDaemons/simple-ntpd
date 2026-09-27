@@ -11,6 +11,30 @@
 #include <cstdint>
 #include <string>
 
+// Winsock headers must be included outside any namespace, and winsock2.h
+// must come before windows.h so windows.h does not pull in winsock.h.
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#ifdef ERROR
+#undef ERROR
+#endif
+#else
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 namespace simple_ntpd {
 
 /**
@@ -22,9 +46,6 @@ namespace simple_ntpd {
 
 #ifdef _WIN32
 #define PLATFORM_WINDOWS
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
 
 // Windows-specific types
 using socket_t = SOCKET;
@@ -36,16 +57,9 @@ using ssize_t = SSIZE_T;
 
 // Windows-specific constants
 #define INVALID_SOCKET_VALUE INVALID_SOCKET
-#define INVALID_SOCKET INVALID_SOCKET
 
 #elif defined(__APPLE__)
 #define PLATFORM_MACOS
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 // Unix-like types
 using socket_t = int;
@@ -60,12 +74,6 @@ using socket_t = int;
 
 #elif defined(__linux__)
 #define PLATFORM_LINUX
-#include <arpa/inet.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 // Unix-like types
 using socket_t = int;
@@ -79,7 +87,12 @@ using socket_t = int;
 #define INVALID_SOCKET -1
 
 #else
-#error "Unsupported platform"
+// POSIX (FreeBSD and other Unix)
+using socket_t = int;
+#define SOCKET_ERROR_CODE errno
+#define CLOSE_SOCKET close
+#define INVALID_SOCKET_VALUE -1
+#define INVALID_SOCKET -1
 #endif
 
 // Common platform-independent types

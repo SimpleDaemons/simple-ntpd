@@ -18,9 +18,13 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#ifdef ERROR
+#undef ERROR
+#endif
 #else
 #include <syslog.h>
 #endif
+#include <filesystem>
 
 namespace simple_ntpd {
 
@@ -43,6 +47,7 @@ const char *levelToString(LogLevel level) {
   }
 }
 
+#ifndef _WIN32
 // Convert log level to syslog priority
 int levelToSyslogPriority(LogLevel level) {
   switch (level) {
@@ -60,6 +65,7 @@ int levelToSyslogPriority(LogLevel level) {
     return LOG_INFO;
   }
 }
+#endif
 
 // Get current timestamp string
 std::string getCurrentTimestamp() {
@@ -88,7 +94,12 @@ class Logger::Impl {
 public:
   Impl()
       : level_(LogLevel::INFO), destination_(LogDestination::CONSOLE),
-        log_file_(), enable_syslog_(false), syslog_facility_(LOG_DAEMON),
+        log_file_(), enable_syslog_(false),
+#ifndef _WIN32
+        syslog_facility_(LOG_DAEMON),
+#else
+        syslog_facility_(0),
+#endif
         structured_json_(false), rotate_max_size_bytes_(0), rotate_max_files_(5), mutex_() {
 
     // Initialize syslog on Unix-like systems
@@ -276,7 +287,6 @@ private:
     // Rotate if needed
     if (!log_file_.empty() && rotate_max_size_bytes_ > 0) {
       std::error_code ec;
-#if __has_include(<filesystem>)
       namespace fs = std::filesystem;
       if (fs::exists(log_file_, ec)) {
         auto sz = fs::file_size(log_file_, ec);
@@ -284,7 +294,6 @@ private:
           rotateLogs();
         }
       }
-#endif
     }
 
     std::ofstream file(log_file_, std::ios::app);
@@ -295,7 +304,6 @@ private:
   }
 
   void rotateLogs() {
-#if __has_include(<filesystem>)
     namespace fs = std::filesystem;
     // Remove oldest
     std::error_code ec;
@@ -312,7 +320,6 @@ private:
     if (fs::exists(log_file_, ec)) {
       fs::rename(log_file_, log_file_ + ".1", ec);
     }
-#endif
   }
 
   void outputToSyslog(LogLevel level, const std::string &message) {

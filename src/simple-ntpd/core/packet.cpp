@@ -11,8 +11,10 @@
 #include <algorithm>
 #include <cstring>
 #include <iomanip>
-#include <netinet/in.h>
 #include <sstream>
+#ifndef _WIN32
+#include <netinet/in.h>
+#endif
 #ifdef __APPLE__
 #include <libkern/OSByteOrder.h>
 #define htobe64(x) OSSwapHostToBigInt64(x)
