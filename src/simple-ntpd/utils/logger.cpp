@@ -296,6 +296,12 @@ private:
       }
     }
 
+    std::error_code dir_ec;
+    const auto log_dir = std::filesystem::path(log_file_).parent_path();
+    if (!log_dir.empty()) {
+      std::filesystem::create_directories(log_dir, dir_ec);
+    }
+
     std::ofstream file(log_file_, std::ios::app);
     if (file.is_open()) {
       file << message << std::endl;

@@ -33,9 +33,15 @@ void NtpConfig::setDefaults() {
   timeout = std::chrono::milliseconds(1000);
 
   log_level = LogLevel::INFO;
+#ifdef _WIN32
+  log_file = "C:\\ProgramData\\simple-ntpd\\simple-ntpd.log";
+  enable_console_logging = false;
+  enable_syslog = false;
+#else
   log_file = "/var/log/simple-ntpd/simple-ntpd.log";
   enable_console_logging = true;
   enable_syslog = true;
+#endif
   log_json = false;
   log_max_size_bytes = 0;
   log_max_files = 5;

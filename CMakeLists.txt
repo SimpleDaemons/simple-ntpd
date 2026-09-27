@@ -140,6 +140,36 @@ install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION lib
 )
 
+# The service process starts with a minimal PATH. Dependency DLLs that sit
+# only in the vcpkg tree are invisible to it, and Windows reports that as
+# error 1053. Ship the non-system DLLs beside the executable.
+if(WIN32)
+    set(_ntpd_vcpkg_bin "")
+    if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+        set(_ntpd_vcpkg_bin "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin")
+    endif()
+    install(CODE "
+        set(_dirs \"$<TARGET_FILE_DIR:${PROJECT_NAME}>\")
+        if(NOT \"${_ntpd_vcpkg_bin}\" STREQUAL \"\")
+            list(APPEND _dirs \"${_ntpd_vcpkg_bin}\")
+        endif()
+        file(GET_RUNTIME_DEPENDENCIES
+            EXECUTABLES \"$<TARGET_FILE:${PROJECT_NAME}>\"
+            RESOLVED_DEPENDENCIES_VAR _resolved
+            UNRESOLVED_DEPENDENCIES_VAR _unresolved
+            DIRECTORIES \${_dirs}
+            PRE_EXCLUDE_REGEXES \"api-ms-\" \"ext-ms-\"
+            POST_EXCLUDE_REGEXES \"[Ss]ystem32\" \"[Ww]indows[\\\\/]\"
+        )
+        foreach(_dll \${_resolved})
+            file(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}/bin\" TYPE SHARED_LIBRARY FILES \"\${_dll}\")
+        endforeach()
+        foreach(_miss \${_unresolved})
+            message(WARNING \"Unresolved runtime dependency: \${_miss}\")
+        endforeach()
+    ")
+endif()
+
 install(DIRECTORY include/
     DESTINATION include
     FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp"

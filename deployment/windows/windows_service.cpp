@@ -74,7 +74,11 @@ void WINAPI service_main(DWORD, LPSTR*) {
     if (g_status_handle == nullptr) {
         return;
     }
-    report_status(SERVICE_START_PENDING, NO_ERROR, 3000);
+    // Answer the SCM before loading config or starting the server. A slow
+    // start, or a missing DLL that used to kill the process first, is what
+    // surfaces as error 1053.
+    report_status(SERVICE_START_PENDING, NO_ERROR, 30000);
+    report_status(SERVICE_RUNNING, NO_ERROR, 0);
     g_stop_event = CreateEventA(nullptr, TRUE, FALSE, nullptr);
     if (g_stop_event == nullptr) {
         report_status(SERVICE_STOPPED, GetLastError(), 0);
@@ -90,7 +94,6 @@ void WINAPI service_main(DWORD, LPSTR*) {
         }
     });
 
-    report_status(SERVICE_RUNNING, NO_ERROR, 0);
     WaitForSingleObject(g_stop_event, INFINITE);
     if (g_request_shutdown != nullptr) {
         g_request_shutdown();
@@ -297,8 +300,9 @@ bool windows_service_entry(int argc, char** argv, int& exit_code,
     g_argc = argc;
     g_argv = argv;
 
+    char service_name[] = "simple-ntpd";
     SERVICE_TABLE_ENTRYA table[] = {
-        {const_cast<LPSTR>(kServiceName), service_main},
+        {service_name, service_main},
         {nullptr, nullptr},
     };
     if (StartServiceCtrlDispatcherA(table)) {
