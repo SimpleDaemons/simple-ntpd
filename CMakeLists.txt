@@ -94,7 +94,7 @@ if(WIN32)
     target_link_libraries(${PROJECT_NAME}_lib PUBLIC ws2_32)
     target_sources(${PROJECT_NAME} PRIVATE
         deployment/windows/windows_service.cpp)
-    target_link_libraries(${PROJECT_NAME} PRIVATE advapi32)
+    target_link_libraries(${PROJECT_NAME} advapi32)
 endif()
 
 if(MSVC)
