@@ -92,6 +92,9 @@ if(WIN32)
     target_compile_definitions(${PROJECT_NAME}_lib PUBLIC
         _CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN)
     target_link_libraries(${PROJECT_NAME}_lib PUBLIC ws2_32)
+    target_sources(${PROJECT_NAME} PRIVATE
+        deployment/windows/windows_service.cpp)
+    target_link_libraries(${PROJECT_NAME} PRIVATE advapi32)
 endif()
 
 if(MSVC)
@@ -278,10 +281,9 @@ if(ENABLE_TESTS)
     )
 endif()
 
-# Package generation
+# Package generation. include(CPack) stays at the end of this block so the
+# variables below are written into CPackConfig.cmake.
 if(ENABLE_PACKAGING)
-    include(CPack)
-    
     # Package information
     set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
     set(CPACK_PACKAGE_VENDOR "SimpleDaemons")
@@ -300,13 +302,14 @@ if(ENABLE_PACKAGING)
         set(CPACK_GENERATOR "WIX;ZIP")
         
         # WIX (MSI) settings
-        set(CPACK_WIX_PRODUCT_GUID "12345678-1234-1234-1234-123456789012")
-        set(CPACK_WIX_UPGRADE_GUID "87654321-4321-4321-4321-210987654321")
+        set(CPACK_WIX_PRODUCT_GUID "6F3A9C21-8E14-4B7D-A5C0-2D9E1F8B4A67")
+        set(CPACK_WIX_UPGRADE_GUID "9C1E7B40-2A58-4F63-8D15-7A0C3E6B9D24")
         set(CPACK_WIX_PROPERTY_ARPPRODUCTICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.ico")
         set(CPACK_WIX_PROPERTY_ARPHELPLINK "https://github.com/simpledaemons/${PROJECT_NAME}")
         set(CPACK_WIX_PROPERTY_ARPURLINFOABOUT "https://github.com/simpledaemons/${PROJECT_NAME}")
         set(CPACK_WIX_PROPERTY_ARPNOREPAIR "1")
-        set(CPACK_WIX_PROPERTY_ARPNOMODIFY "1")
+        # WixUI_InstallDir already defines ARPNOMODIFY. Setting it again fails light.exe.
+        set(CPACK_WIX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/wix-service.xml")
         
         # ZIP package settings
         set(CPACK_ZIP_COMPONENT_INSTALL ON)
@@ -471,7 +474,8 @@ if(ENABLE_PACKAGING)
         "*.lib"
     )
     
-    # CPack configuration is already included above
+    # Include CPack configuration
+    include(CPack)
 endif()
 
 # Print configuration summary

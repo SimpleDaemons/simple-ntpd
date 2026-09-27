@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CPackWiXPatch>
+  <!-- CPack names the installed exe component CM_CP_bin.<name>.exe -->
+  <CPackWiXFragment Id="CM_CP_bin.simple-ntpd.exe">
+    <ServiceInstall
+      Id="SimpleNtpdServiceInstall"
+      Name="simple-ntpd"
+      DisplayName="Simple NTP Daemon"
+      Description="Provides NTP time synchronization"
+      Type="ownProcess"
+      Start="auto"
+      ErrorControl="normal"
+      Account="LocalSystem">
+      <ServiceDependency Id="Tcpip"/>
+    </ServiceInstall>
+    <ServiceControl
+      Id="SimpleNtpdServiceControl"
+      Name="simple-ntpd"
+      Stop="both"
+      Remove="uninstall"
+      Wait="yes"/>
+  </CPackWiXFragment>
+</CPackWiXPatch>

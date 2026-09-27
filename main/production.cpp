@@ -9,6 +9,7 @@
 #include "simple-ntpd/utils/logger.hpp"
 #include "simple-ntpd/config/config.hpp"
 #include "simple-ntpd/core/server.hpp"
+#include "simple-ntpd/platform/windows_service.hpp"
 #include <csignal>
 #include <iostream>
 #include <memory>
@@ -70,6 +71,8 @@ void printUsage() {
   std::cout << "  status               Show server status" << std::endl;
   std::cout << "  reload               Reload configuration" << std::endl;
   std::cout << "  metrics              Print Prometheus metrics" << std::endl;
+  std::cout << "  service              Windows service install, status, or uninstall"
+            << std::endl;
   std::cout << "  health               Run health checks" << std::endl;
   std::cout << "  test                 Test server configuration" << std::endl;
   std::cout << "  stats                Show server statistics" << std::endl;
@@ -295,7 +298,9 @@ void initializeSignalHandlers() {
  * @param argv Argument vector
  * @return Exit code
  */
-int main(int argc, char *argv[]) {
+static void request_shutdown() { g_shutdown_requested = true; }
+
+static int run_application(int argc, char *argv[]) {
   try {
     // Initialize configuration
     auto config = std::make_shared<NtpConfig>();
@@ -404,4 +409,13 @@ int main(int argc, char *argv[]) {
   }
 
   return 0;
+}
+
+int main(int argc, char* argv[]) {
+  int exit_code = 0;
+  if (windows_service_entry(argc, argv, exit_code, request_shutdown,
+                            run_application)) {
+    return exit_code;
+  }
+  return run_application(argc, argv);
 }
